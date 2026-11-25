@@ -1,0 +1,29 @@
+name: LeadPilot Phase 28-31 Tests
+
+on:
+  push:
+    paths:
+      - "leadpilot/phase28-31/**"
+      - ".github/workflows/phase28-31-tests.yml"
+
+  pull_request:
+    paths:
+      - "leadpilot/phase28-31/**"
+      - ".github/workflows/phase28-31-tests.yml"
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: leadpilot/phase28-31
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm test
