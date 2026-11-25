@@ -1,141 +1,161 @@
 
 "use strict";
 
-const test = require("node:test");
-const assert = require("node:assert/strict");
+const {
+  generateLeadContentOpportunity
+} = require("./lead-content-engine");
 
 const {
+  analyzeLeadPatterns
+} = require("./lead-pattern-analyzer");
+
+const {
+  planContentPriorities
+} = require("./content-priority-planner");
+
+function cleanString(value, maxLength = 1000) {
+  if (typeof value !== "string") return "";
+  return value.trim().replace(/\s+/g, " ").slice(0, maxLength);
+}
+
+function getMessageText(item) {
+  if (typeof item === "string") return cleanString(item);
+  if (item && typeof item === "object") {
+    return cleanString(item.message);
+  }
+  return "";
+}
+
+function runOrganicContentWorkflow(input = {}) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    return { success: false, error: "Invalid input object." };
+  }
+
+  const businessName = cleanString(input.businessName, 120);
+  const businessType = cleanString(input.businessType, 120);
+
+  if (!businessName) {
+    return { success: false, error: "Business name is required." };
+  }
+
+  const suppliedMessages = Array.isArray(input.messages)
+    ? input.messages.map(getMessageText).filter(Boolean)
+    : [];
+
+  const leadMessage = cleanString(input.leadMessage, 1000);
+
+  const messages = suppliedMessages.length
+    ? suppliedMessages
+    : leadMessage ? [leadMessage] : [];
+
+  if (!messages.length) {
+    return {
+      success: false,
+      error: "At least one valid lead message is required."
+    };
+  }
+
+  // STEP 40
+  const contentOpportunity = generateLeadContentOpportunity({
+    businessName,
+    businessType,
+    message: leadMessage || messages[0],
+    source: cleanString(input.source, 80) || "unknown"
+  });
+
+  if (!contentOpportunity.success) {
+    return {
+      success: false,
+      stage: "step_40",
+      error: contentOpportunity.error
+    };
+  }
+
+  // STEP 41
+  const patternAnalysis = analyzeLeadPatterns({
+    businessName,
+    messages,
+    minimumOccurrences:
+      Number.isInteger(input.minimumOccurrences) &&
+      input.minimumOccurrences > 0
+        ? input.minimumOccurrences
+        : 2
+  });
+
+  if (!patternAnalysis.success) {
+    return {
+      success: false,
+      stage: "step_41",
+      error: patternAnalysis.error
+    };
+  }
+
+  // STEP 42
+  const recurringPatterns = patternAnalysis.recurringPatterns || [];
+
+  let contentPriorityPlan;
+
+  if (recurringPatterns.length) {
+    contentPriorityPlan = planContentPriorities({
+      businessName,
+      patterns: recurringPatterns,
+      maxItems: input.maxItems
+    });
+
+    if (!contentPriorityPlan.success) {
+      return {
+        success: false,
+        stage: "step_42",
+        error: contentPriorityPlan.error
+      };
+    }
+  } else {
+    contentPriorityPlan = {
+      success: true,
+      status: "insufficient_recurring_patterns",
+      message: "More inquiries are needed to identify recurring topics.",
+      backlog: []
+    };
+  }
+
+  return {
+    success: true,
+    step: 43,
+    engine: "Organic Content Workflow",
+
+    business: {
+      name: businessName,
+      type: businessType || "Not provided"
+    },
+
+    contentOpportunity,
+    patternAnalysis,
+    contentPriorityPlan,
+
+    workflowSummary: {
+      messagesAnalyzed: patternAnalysis.summary.validMessagesAnalyzed,
+      recurringPatterns: patternAnalysis.summary.recurringPatternsFound,
+      contentItemsCreated: contentPriorityPlan.backlog.length,
+      humanReviewRequired: true
+    },
+
+    privacy: {
+      rawLeadMessagesReturned: false,
+      personalLeadDetailsReturned: false
+    },
+
+    execution: {
+      method: "Rule-based workflow",
+      aiModelUsed: false,
+      liveDataUsed: false,
+      autoPublishingEnabled: false
+    },
+
+    status: "workflow_completed",
+    generatedAt: new Date().toISOString()
+  };
+}
+
+module.exports = {
   runOrganicContentWorkflow
-} = require("./organic-content-workflow");
-
-test("rejects a missing business name", () => {
-  const result = runOrganicContentWorkflow({
-    messages: ["What is the price?"]
-  });
-
-  assert.equal(result.success, false);
-  assert.equal(result.error, "Business name is required.");
-});
-
-test("rejects missing lead messages", () => {
-  const result = runOrganicContentWorkflow({
-    businessName: "Demo Store",
-    messages: []
-  });
-
-  assert.equal(result.success, false);
-  assert.equal(
-    result.error,
-    "At least one valid lead message is required."
-  );
-});
-
-test("creates content from repeated pricing inquiries", () => {
-  const result = runOrganicContentWorkflow({
-    businessName: "Demo Store",
-    businessType: "Retail",
-    messages: [
-      "What is the price of this product?",
-      "Please share the price and cost.",
-      "Can you tell me the pricing?"
-    ]
-  });
-
-  assert.equal(result.success, true);
-  assert.equal(result.step, 43);
-  assert.equal(
-    result.contentOpportunity.analysis.detectedIntent,
-    "pricing"
-  );
-  assert.equal(result.patternAnalysis.summary.validMessagesAnalyzed, 3);
-  assert.equal(result.patternAnalysis.summary.recurringPatternsFound, 1);
-  assert.equal(result.contentPriorityPlan.success, true);
-  assert.equal(result.contentPriorityPlan.backlog.length, 1);
-  assert.equal(result.workflowSummary.contentItemsCreated, 1);
-  assert.equal(result.execution.aiModelUsed, false);
-  assert.equal(result.execution.liveDataUsed, false);
-  assert.equal(result.execution.autoPublishingEnabled, false);
-});
-
-test("accepts message objects and ignores invalid entries", () => {
-  const result = runOrganicContentWorkflow({
-    businessName: "Demo Store",
-    messages: [
-      null,
-      42,
-      { message: "Is this item available?" },
-      { message: "Is it available in stock?" }
-    ]
-  });
-
-  assert.equal(result.success, true);
-  assert.equal(result.patternAnalysis.summary.validMessagesAnalyzed, 2);
-  assert.equal(result.patternAnalysis.summary.recurringPatternsFound, 1);
-  assert.equal(
-    result.contentOpportunity.analysis.detectedIntent,
-    "availability"
-  );
-});
-
-test("handles inquiries with no recurring patterns", () => {
-  const result = runOrganicContentWorkflow({
-    businessName: "Demo Store",
-    messages: [
-      "What is the price?",
-      "Do you have customer reviews?"
-    ]
-  });
-
-  assert.equal(result.success, true);
-  assert.equal(
-    result.contentPriorityPlan.status,
-    "insufficient_recurring_patterns"
-  );
-  assert.deepEqual(result.contentPriorityPlan.backlog, []);
-  assert.equal(result.workflowSummary.contentItemsCreated, 0);
-});
-
-test("uses leadMessage when messages array is empty", () => {
-  const result = runOrganicContentWorkflow({
-    businessName: "Demo Store",
-    leadMessage: "Please share product details.",
-    messages: []
-  });
-
-  assert.equal(result.success, true);
-  assert.equal(result.patternAnalysis.summary.validMessagesAnalyzed, 1);
-  assert.equal(
-    result.contentOpportunity.analysis.detectedIntent,
-    "product_information"
-  );
-});
-
-test("does not return raw lead messages", () => {
-  const privateMessage =
-    "My private inquiry: please call me at 9999999999 about pricing.";
-
-  const result = runOrganicContentWorkflow({
-    businessName: "Demo Store",
-    messages: [privateMessage, privateMessage]
-  });
-
-  assert.equal(result.success, true);
-  assert.equal(JSON.stringify(result).includes("9999999999"), false);
-  assert.equal(result.privacy.rawLeadMessagesReturned, false);
-});
-
-test("respects maxItems when planning content", () => {
-  const result = runOrganicContentWorkflow({
-    businessName: "Demo Store",
-    maxItems: 1,
-    messages: [
-      "What is the price?",
-      "Please share pricing.",
-      "Is this available?",
-      "Is it in stock?"
-    ]
-  });
-
-  assert.equal(result.success, true);
-  assert.ok(result.contentPriorityPlan.backlog.length <= 1);
-});
+};
