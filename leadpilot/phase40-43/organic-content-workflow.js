@@ -3,14 +3,14 @@
 
 /**
  * LeadPilot AI - Step 43
- * Organic Content Workflow
+ * Integrated Organic Content Workflow
  *
- * Connects:
- * Step 40 - Lead Content Engine
- * Step 41 - Lead Pattern Analyzer
- * Step 42 - Content Priority Planner
+ * Step 40: Lead Content Opportunity
+ * Step 41: Lead Pattern Analysis
+ * Step 42: Content Priority Planning
  *
- * Rule-based workflow. No live AI or external publishing.
+ * Rule-based implementation.
+ * No live AI, live market data, or automatic publishing.
  */
 
 const {
@@ -34,16 +34,34 @@ function cleanString(value, maxLength = 1000) {
     .slice(0, maxLength);
 }
 
+function getMessageText(item) {
+  if (typeof item === "string") {
+    return cleanString(item);
+  }
+
+  if (item && typeof item === "object") {
+    return cleanString(item.message);
+  }
+
+  return "";
+}
+
 function runOrganicContentWorkflow(input = {}) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    return {
+      success: false,
+      error: "A valid input object is required."
+    };
+  }
+
   const businessName = cleanString(input.businessName, 120);
   const businessType = cleanString(input.businessType, 120);
   const leadMessage = cleanString(input.leadMessage, 1000);
+  const source = cleanString(input.source, 80) || "unknown";
 
   const messages = Array.isArray(input.messages)
     ? input.messages
     : [];
-
-  const source = cleanString(input.source, 80) || "unknown";
 
   if (!businessName) {
     return {
@@ -52,125 +70,140 @@ function runOrganicContentWorkflow(input = {}) {
     };
   }
 
-  if (messages.length === 0 && !leadMessage) {
+  const validMessages = messages
+    .map(getMessageText)
+    .filter(Boolean);
+
+  const representativeMessage =
+    leadMessage || validMessages[0] || "";
+
+  if (!representativeMessage) {
     return {
       success: false,
-      error: "Provide at least one lead message."
+      error: "At least one valid lead message is required."
     };
   }
 
-  const workflowMessages = messages.length > 0
-    ? messages
-    : [leadMessage];
+  const workflowMessages = validMessages.length > 0
+    ? validMessages
+    : [representativeMessage];
 
-  const results = {
-    success: true,
-    step: 43,
-    engine: "LeadPilot Organic Content Workflow",
-    business: {
-      name: businessName,
-      type: businessType || "Not provided"
-    }
-  };
+  // STEP 40: Generate a content opportunity.
+  const opportunity = generateLeadContentOpportunity({
+    businessName,
+    businessType,
+    message: representativeMessage,
+    source
+  });
 
-  // STEP 40: Generate content opportunity from one inquiry.
-  if (leadMessage) {
-    const opportunity = generateLeadContentOpportunity({
-      businessName,
-      businessType,
-      message: leadMessage,
-      source
-    });
-
-    if (!opportunity.success) {
-      return {
-        success: false,
-        stage: "lead_content_engine",
-        error: opportunity.error
-      };
-    }
-
-    results.individualContentOpportunity = opportunity;
+  if (!opportunity || !opportunity.success) {
+    return {
+      success: false,
+      stage: "lead_content_engine",
+      error: opportunity?.error || "Content opportunity generation failed."
+    };
   }
 
-  // STEP 41: Analyze repeated inquiry patterns.
+  // STEP 41: Analyze inquiry patterns.
+  const minimumOccurrences =
+    Number.isInteger(input.minimumOccurrences) &&
+    input.minimumOccurrences > 0
+      ? input.minimumOccurrences
+      : 2;
+
   const patternAnalysis = analyzeLeadPatterns({
     businessName,
     messages: workflowMessages,
-    minimumOccurrences:
-      Number.isInteger(input.minimumOccurrences) &&
-      input.minimumOccurrences > 0
-        ? input.minimumOccurrences
-        : 2
+    minimumOccurrences
   });
 
-  if (!patternAnalysis.success) {
+  if (!patternAnalysis || !patternAnalysis.success) {
     return {
       success: false,
       stage: "lead_pattern_analyzer",
-      error: patternAnalysis.error
+      error: patternAnalysis?.error || "Lead pattern analysis failed."
     };
   }
 
-  results.patternAnalysis = patternAnalysis;
-
   // STEP 42: Prioritize recurring content opportunities.
-  const recurringPatterns = patternAnalysis.recurringPatterns;
+  const recurringPatterns = Array.isArray(
+    patternAnalysis.recurringPatterns
+  )
+    ? patternAnalysis.recurringPatterns
+    : [];
+
+  let priorityPlan;
 
   if (recurringPatterns.length > 0) {
-    const priorityPlan = planContentPriorities({
+    priorityPlan = planContentPriorities({
       businessName,
       patterns: recurringPatterns,
       maxItems: input.maxItems
     });
 
-    if (!priorityPlan.success) {
+    if (!priorityPlan || !priorityPlan.success) {
       return {
         success: false,
         stage: "content_priority_planner",
-        error: priorityPlan.error
+        error: priorityPlan?.error || "Content prioritization failed."
       };
     }
-
-    results.contentPriorityPlan = priorityPlan;
   } else {
-    results.contentPriorityPlan = {
+    priorityPlan = {
       success: true,
       status: "insufficient_recurring_patterns",
       message:
-        "No repeated inquiry pattern found yet. Collect more inquiries before prioritizing recurring topics.",
+        "More repeated inquiries are needed to identify recurring content priorities.",
       backlog: []
     };
   }
 
-  results.workflowSummary = {
-    messagesAnalyzed:
-      patternAnalysis.summary.validMessagesAnalyzed,
-    recurringPatterns:
-      patternAnalysis.summary.recurringPatternsFound,
-    contentItemsCreated:
-      results.contentPriorityPlan.backlog.length,
-    humanReviewRequired: true
+  const backlog = Array.isArray(priorityPlan.backlog)
+    ? priorityPlan.backlog
+    : [];
+
+  return {
+    success: true,
+    step: 43,
+    engine: "LeadPilot Organic Content Workflow",
+
+    business: {
+      name: businessName,
+      type: businessType || "Not provided"
+    },
+
+    contentOpportunity: opportunity,
+
+    patternAnalysis,
+
+    contentPriorityPlan: priorityPlan,
+
+    workflowSummary: {
+      messagesAnalyzed:
+        patternAnalysis.summary.validMessagesAnalyzed,
+      recurringPatterns:
+        patternAnalysis.summary.recurringPatternsFound,
+      contentItemsCreated: backlog.length,
+      humanReviewRequired: true
+    },
+
+    privacy: {
+      rawLeadMessagesReturned: false,
+      personalLeadDetailsReturned: false,
+      note:
+        "Use aggregated inquiry patterns for content planning. Never publish private lead information."
+    },
+
+    execution: {
+      method: "Rule-based workflow",
+      aiModelUsed: false,
+      liveDataUsed: false,
+      autoPublishingEnabled: false
+    },
+
+    status: "workflow_completed",
+    generatedAt: new Date().toISOString()
   };
-
-  results.privacy = {
-    rawLeadMessagesReturned: false,
-    personalLeadDetailsReturned: false,
-    note:
-      "Use aggregated inquiry patterns for content planning. Never publish private lead information."
-  };
-
-  results.execution = {
-    method: "Rule-based workflow",
-    aiModelUsed: false,
-    liveDataUsed: false,
-    autoPublishingEnabled: false
-  };
-
-  results.status = "workflow_completed";
-  results.generatedAt = new Date().toISOString();
-
-  return results;
 }
 
 module.exports = {
