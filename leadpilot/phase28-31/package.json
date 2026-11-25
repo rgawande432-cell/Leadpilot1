@@ -1,0 +1,8 @@
+{
+  "name": "leadpilot-phase28-31",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  }
+}
