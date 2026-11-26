@@ -1,0 +1,29 @@
+name: LeadPilot Backend Lead Processing Tests
+
+on:
+  push:
+    paths:
+      - "backend/src/**"
+      - "backend/tests/**"
+      - "backend/package.json"
+      - ".github/workflows/backend-lead-tests.yml"
+  pull_request:
+    paths:
+      - "backend/src/**"
+      - "backend/tests/**"
+      - "backend/package.json"
+      - ".github/workflows/backend-lead-tests.yml"
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm test
+      - run: npm run health
