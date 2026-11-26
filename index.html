@@ -229,31 +229,21 @@ f.elements.services.value=(biz?.services||[]).join(', ');
 }
 
 function ideas(){
-const niche=biz.niche||biz.business_type||'your products or services';
-const area=biz.location||'your local area';
-const name=biz.name||'your business';
-const services=(biz.services||[]).filter(Boolean);
-const serviceLine=services.length?services.join(', '):niche;
-const prompts=[
-{title:'Local business introduction',text:'Create a friendly post introducing '+name+' in '+area+'. Explain how we help local customers with '+serviceLine+'. Include a clear call to message or call us.'},
-{title:'Frequently asked question',text:'Write a short social post answering one common customer question about '+niche+'. Keep it simple, useful and locally relevant to '+area+'.'},
-{title:'Service spotlight',text:'Create a post highlighting '+serviceLine+'. Explain the benefit to a customer, avoid exaggerated promises and invite them to enquire for details.'},
-{title:'Helpful tip',text:'Share 3 practical tips customers in '+area+' should know before choosing '+niche+'. Make it educational, concise and easy to save.'},
-{title:'Behind the scenes',text:'Draft a behind-the-scenes post showing how '+name+' works, prepares or serves customers. Keep the tone genuine and trustworthy.'},
-{title:'Customer checklist',text:'Create a simple checklist for someone in '+area+' comparing options for '+niche+'. Add a soft invitation to contact '+name+' with questions.'},
-{title:'Offer announcement template',text:'Draft a transparent promotional post for '+name+' about '+serviceLine+'. Leave price, dates and terms as editable placeholders; do not invent discounts.'},
-{title:'Enquiry call-to-action',text:'Write a short post inviting local customers who need '+niche+' to send their requirement to '+name+'. Use a friendly CTA and include placeholders for verified contact details.'}
+const name=biz.name||'Our business',niche=biz.niche||biz.business_type||'our services',area=biz.location||'your area';
+const services=(biz.services||[]).filter(Boolean),serviceLine=services.length?services.join(', '):niche;
+const phone=biz.phone||'',website=biz.website||'';
+const contact=phone?'Call/WhatsApp: '+phone:website?'Visit: '+website:'Send us a message to enquire.';
+const posts=[
+{title:'Business introduction',text:'Hello '+area+'! 👋\\n\\nWelcome to '+name+'. We help customers with '+serviceLine+'. If you are exploring options or have a question, we are happy to help you understand what may suit your needs.\\n\\n'+contact+'\\n\\n#LocalBusiness #'+niche.replace(/[^a-z0-9]/gi,'')+' #'+area.replace(/[^a-z0-9]/gi,'')},
+{title:'Service awareness',text:'Looking for help with '+niche+'?\\n\\nAt '+name+', we offer '+serviceLine+'. Tell us what you need and we can share information and discuss the next steps—no pressure.\\n\\n'+contact},
+{title:'Helpful tip post',text:'A quick tip for choosing '+niche+':\\n\\n• Clearly define what you need\\n• Compare options and ask questions\\n• Check details and terms before deciding\\n\\nNeed guidance? '+name+' in '+area+' is available to answer your enquiry.\\n\\n'+contact},
+{title:'FAQ invitation',text:'Have questions about '+niche+'? 🤔\\n\\nEvery customer’s requirement can be different. Share your specific need with '+name+' and we will respond with relevant information.\\n\\n'+contact},
+{title:'Local reminder',text:'Hello residents and businesses of '+area+'!\\n\\nIf you are currently looking for '+niche+', you can contact '+name+' to discuss your requirement and get more information about '+serviceLine+'.\\n\\n'+contact},
+{title:'Enquiry CTA',text:'Need '+niche+' in '+area+'?\\n\\nSend '+name+' a message with: 1) what you need, 2) your preferred timeline, and 3) any questions. We will follow up with information based on your requirement.\\n\\n'+contact}
 ];
-$('ideas').innerHTML=prompts.map((p,i)=>
-'<div class="row"><b>'+esc(i+1)+'. '+esc(p.title)+'</b><p>'+esc(p.text)+'</p><button class="btn alt" data-copy="'+encodeURIComponent(p.text)+'">Copy prompt</button></div>'
-).join('');
-$('ideas').querySelectorAll('[data-copy]').forEach(b=>
-b.onclick=()=>navigator.clipboard.writeText(decodeURIComponent(b.dataset.copy))
-.then(()=>b.textContent='Copied')
-.catch(()=>alert(decodeURIComponent(b.dataset.copy)))
-);
+$('ideas').innerHTML=posts.map((p,i)=>'<div class="row"><b>'+esc(i+1)+'. '+esc(p.title)+'</b><pre style="white-space:pre-wrap;font:inherit;margin:10px 0">'+esc(p.text)+'</pre><button class="btn alt" data-post="'+i+'">Copy post text</button></div>').join('');
+$('ideas').querySelectorAll('[data-post]').forEach(btn=>btn.onclick=()=>{const text=posts[Number(btn.dataset.post)].text;navigator.clipboard.writeText(text).then(()=>btn.textContent='Copied!').catch(()=>prompt('Copy post text:',text));});
 }
-
 async function load(){
 const p=await db.from('businesses').select('*').eq('owner_user_id',user.id).order('created_at',{ascending:false}).limit(1).maybeSingle();
 if(p.error){say('businessMsg','Profile error: '+p.error.message);return;}
