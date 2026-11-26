@@ -220,7 +220,8 @@ hide('features');hide('dashboard');hide('authModal');hide('businessModal');
 document.querySelector('.hero').classList.add('hidden');
 $('publicEnquiry').classList.remove('hidden');
 $('publicBusinessName').textContent='Send an enquiry';
-$('publicBusinessInfo').textContent='Fill in your details and enquiry. Your contact details will be shared with this business.';
+$('publicBusinessInfo').textContent='Loading business details…';
+fetch('https://hbuttmjdlzqwxlqdkgca.supabase.co/functions/v1/public-business-profile?business_id='+encodeURIComponent(publicBusinessId),{headers:{apikey:'sb_publishable_rHbGO86cBuo3tlGmtKl9DA_fRDlJl-N'}}).then(r=>r.json().then(data=>({ok:r.ok,data}))).then(({ok,data})=>{if(!ok||!data.business){$('publicBusinessInfo').textContent='Send your enquiry to this business. Contact details will be shared only if you submit the form.';return;}const b=data.business,services=(b.services||[]).map(esc).join(', '),phone=b.phone?'<p><b>Phone:</b> <a href="tel:'+esc(b.phone)+'">'+esc(b.phone)+'</a></p>':'',website=(()=>{try{const u=new URL(b.website);return ['http:','https:'].includes(u.protocol)?'<p><b>Website:</b> <a target="_blank" rel="noopener noreferrer" href="'+esc(u.href)+'">'+esc(u.hostname)+'</a></p>':''}catch{return''}})();$('publicBusinessName').textContent=b.name||'Send an enquiry';$('publicBusinessInfo').innerHTML='<p>'+esc([b.niche,b.business_type].filter(Boolean).join(' · '))+'</p><p>'+esc(b.description||'')+'</p><p><b>Area:</b> '+esc(b.location||'')+'</p>'+(services?'<p><b>Services/products:</b> '+services+'</p>':'')+phone+website+'<p>Your contact details will be shared with this business only when you submit the enquiry.</p>';}).catch(()=>{$('publicBusinessInfo').textContent='Send your enquiry to this business. Contact details will be shared only if you submit the form.'});
 $('publicEnquiryForm').onsubmit=async e=>{
 e.preventDefault();
 const form=e.target, fd=new FormData(form);
