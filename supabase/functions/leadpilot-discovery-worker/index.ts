@@ -1,10 +1,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+import { parseGoogleNewsRss } from "../_shared/google-news-rss.js";
 const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type, x-leadpilot-worker-token","Access-Control-Allow-Methods":"POST, OPTIONS"};
 const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...cors,"Content-Type":"application/json"}});
 const clean=(s:string)=>String(s||"").toLowerCase().replace(/\s+/g," ").trim().slice(0,600);
-const xmlDecode=(s:string)=>s.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g,"$1").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#39;/g,"'");
-const parseRss=(xml:string)=>[...xml.matchAll(/<item\b[^>]*>([\s\S]*?)<\/item>/gi)].map(m=>{const text=m[1];const field=(tag:string)=>xmlDecode((text.match(new RegExp("<"+tag+"[^>]*>([\\s\\S]*?)<\\/"+tag+">","i"))||[])[1]||"").trim();return {title:field("title"),url:field("link"),date:field("pubDate"),domain:"Google News RSS"};}).filter(x=>x.title&&x.url);
+
 Deno.serve(async(req)=>{
  if(req.method==="OPTIONS")return new Response("ok",{headers:cors});
  if(req.method!=="POST")return json({error:"POST required"},405);
@@ -54,7 +54,7 @@ Deno.serve(async(req)=>{
       const rssUrl=new URL("https://news.google.com/rss/search");rssUrl.searchParams.set("q",query+" when:7d");rssUrl.searchParams.set("hl","en-IN");rssUrl.searchParams.set("gl","IN");rssUrl.searchParams.set("ceid","IN:en");
       const rss=await fetch(rssUrl,{headers:{"Accept":"application/rss+xml, application/xml, text/xml"}});
       if(!rss.ok)throw new Error((fallbackReason||"GDELT returned no articles")+"; Google News RSS "+rss.status);
-      articles=parseRss(await rss.text());provider="Google News RSS fallback";
+      articles=parseGoogleNewsRss(await rss.text());provider="Google News RSS fallback";
      }
      for(const result of [...new Map(articles.filter((x:any)=>x.url).map((x:any)=>[x.url,x])).values()].slice(0,20)){
       const evidence=(result.title+" — "+result.domain+" — "+result.date).slice(0,1800),txt=clean(evidence);
