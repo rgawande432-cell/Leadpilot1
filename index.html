@@ -84,11 +84,7 @@ footer{margin-top:45px;border-top:1px solid #e1e7f0;padding:25px 0;color:#7b879a
 <section id="features">
 <span class="tag">Features</span>
 <h2>Built for local business owners</h2>
-<div class="cards">
-<article class="card" role="button" tabindex="0" id="featureProfile"><h3>Business profile</h3><p>Save your shop, service, location and contact details. Website optional.</p></article>
-<article class="card" role="button" tabindex="0" id="featureCRM"><h3>Enquiry CRM</h3><p>See customer enquiries and update follow-up status from one place.</p></article>
-<article class="card" role="button" tabindex="0" id="featureContent"><h3>Content ideas</h3><p>Get post and FAQ prompts based on your business category and area.</p></article>
-</div>
+<article class="card" role="button" tabindex="0" id="featureProfile"><h3>Business profile</h3><p>Save your shop, service, location and contact details. Website optional.</p><button class="btn" type="button" data-public-feature="profile">Open business profile →</button></article><article class="card" role="button" tabindex="0" id="featureCRM"><h3>Enquiry CRM</h3><p>See customer enquiries and update follow-up status from one place.</p><button class="btn" type="button" data-public-feature="crm">Open enquiry CRM →</button></article><article class="card" role="button" tabindex="0" id="featureContent"><h3>Content ideas</h3><p>Get post and FAQ prompts based on your business category and area.</p><button class="btn" type="button" data-public-feature="content">Open Content Studio →</button></article>
 </section>
 
 <section id="dashboard" class="hidden"><div id="dashboardNav" class="actions" style="position:sticky;top:0;background:#f5f7fc;z-index:2;padding:10px;border:1px solid #dbe5f5;border-radius:12px;overflow:auto;flex-wrap:nowrap"><button class="btn alt" data-nav="overview">Overview</button><button class="btn alt" data-nav="profile">Profile</button><button class="btn alt" data-nav="aiActivation">AI Leads</button><button class="btn alt" data-nav="intentRadar">Intent Radar</button><button class="btn alt" data-nav="crm">CRM</button><button class="btn alt" data-nav="contentStudio">Content</button><button class="btn alt" data-nav="analytics">Analytics</button><button class="btn alt" data-nav="notifications">Notifications</button><button class="btn alt" data-nav="campaignPlanner">Campaigns</button><button class="btn alt" data-nav="sourceConnections">Sources</button><button class="btn alt" data-nav="followupPlanner">Follow-ups</button></div>
@@ -203,6 +199,7 @@ const hide=id=>$(id).classList.add('hidden');
 const say=(id,s)=>$(id).textContent=s;
 const esc=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
+function wireLandingFeatures(){document.querySelectorAll('[data-public-feature]').forEach(b=>b.onclick=e=>{e.stopPropagation();auth('signup');});['featureProfile','featureCRM','featureContent'].forEach(id=>{const el=$(id);if(el){el.onclick=()=>auth('signup');el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();auth('signup');}};}});$('exploreBtn')?.addEventListener('click',()=>document.getElementById('features')?.scrollIntoView({behavior:'smooth'}));}
 function auth(m){
 mode=m;
 say('authHeading',m==='signup'?'Create account':'Login');
@@ -211,6 +208,7 @@ $('authSwitch').textContent=m==='signup'?'I already have an account':'Create a n
 say('authMsg','');
 show('authModal');
 }
+wireLandingFeatures();
 
 function initPublicEnquiry(){
 if(!publicBusinessId)return;
