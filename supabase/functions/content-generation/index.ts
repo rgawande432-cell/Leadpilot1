@@ -1,6 +1,23 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type","Access-Control-Allow-Methods":"POST, OPTIONS"};
 const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...cors,"Content-Type":"application/json"}});
+const safe=(s:any)=>String(s||"").trim();
+const freeTemplates=(business:any,type:string,body:any)=>{
+ const name=safe(business.name),niche=safe(business.niche||business.business_type),area=safe(business.location),services=Array.isArray(business.services)?business.services.map(safe).filter(Boolean):safe(business.services).split(",").map((s:string)=>s.trim()).filter(Boolean);
+ const offer=services[0]||niche||"our services",lang=safe(body.language||"Hindi and simple English");
+ const contact=business.phone?("Contact: "+business.phone):"Message us to ask about availability";
+ const hashtags=["#"+niche.replace(/[^a-zA-Z0-9]/g,""),"#"+area.split(",")[0].replace(/[^a-zA-Z0-9]/g,""),"#LocalBusiness"].filter(h=>h.length>1).join(" ");
+ const posts=[
+  ["Useful tip","Before choosing "+offer+", list your main requirement and budget range. It makes it easier to compare options and ask the right questions.","Need help with "+offer+"? "+contact],
+  ["Local help","Looking for "+offer+" in "+area+"? Tell us what you need and we will help you understand the available options. "+contact],
+  ["Common question","Not sure where to start with "+offer+"? Share your question or requirement. We can guide you on the next step. "+contact],
+  ["Planning reminder","A little planning can save time: note your requirement, preferred timing and questions before contacting a provider. For "+offer+", reach out to "+name+". "+contact],
+  ["Open enquiry","Have a requirement for "+offer+"? Send the details—what you need and where you need it in "+area+". "+contact]
+ ];
+ if(type==="faq")return {content:["FAQs (template; review before publishing)","1. What services do you provide?\nWe offer "+(services.length?services.join(", "):niche)+" in "+area+".","2. Where do you serve?\nOur listed business area is "+area+". Please confirm service availability.","3. How can I request information?\nContact us at "+(business.phone||"our business contact channel")+" and share your requirement.","4. What details should I share?\nDescribe the service/product you need, preferred area and any important requirements.","5. Can I ask questions before proceeding?\nYes. Send your questions so we can respond with relevant information.","6. How do I know what is suitable?\nTell us your needs and we can discuss options based on the information available.","7. Do you have a website?\n"+(business.website||"A website is not listed in the business profile. Contact us directly for information."),"8. How do I get in touch?\n"+contact].join("\n\n"),language:lang,disclaimer:"Template-generated content; not AI output. Check every detail before publishing."};
+ if(type==="campaign")return {content:["Organic campaign template","Goal: Encourage genuine local enquiries for "+offer+".","Audience: People in "+area+" who are actively researching "+niche+".","Topic: A practical checklist to help customers understand their requirement.","Post 1: "+posts[0][1],"Post 2: "+posts[2][1],"Post 3: "+posts[4][1],"CTA: "+contact,"Suggested cadence: 3 posts across one week; adjust based on real engagement.","Measure: Relevant questions, genuine enquiries, response rate and qualified enquiries. Avoid counting likes as leads."].join("\n\n"),language:lang,disclaimer:"Template campaign; not AI output. Confirm local audience, services and details."};
+ return {content:posts.map((p,i)=>("Post "+(i+1)+": "+p[0]+"\n"+p[1]+"\nCTA: "+p[2]+"\n"+hashtags)).join("\n\n"),language:lang,disclaimer:"Template-generated content; not AI output. Review claims and contact details before publishing."};
+};
 Deno.serve(async(req)=>{
  if(req.method==="OPTIONS")return new Response("ok",{headers:cors});
  if(req.method!=="POST")return json({error:"POST required"},405);
