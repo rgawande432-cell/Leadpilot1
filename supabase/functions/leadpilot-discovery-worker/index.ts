@@ -47,7 +47,7 @@ Deno.serve(async(req)=>{
      let fallbackReason="";
      if(response.ok){
       const raw=await response.text();
-      try{const data=JSON.parse(raw);if(Array.isArray(data.articles)){articles=data.articles.map((x:any)=>({title:x.title||"",url:x.url||"",domain:x.domain||"",date:x.seendate||""));provider="GDELT Project";}else fallbackReason="GDELT returned HTTP 200 without article data";}
+      try{const data=JSON.parse(raw);if(Array.isArray(data.articles)){articles=data.articles.map((x:any)=>({title:x.title||"",url:x.url||"",domain:x.domain||"",date:x.seendate||""}));provider="GDELT Project";}else fallbackReason="GDELT returned HTTP 200 without article data";}
       catch{fallbackReason="GDELT returned HTTP 200 with non-JSON content";}
      }else if(response.status===429||response.status>=500)fallbackReason="GDELT HTTP "+response.status;
      else throw new Error("GDELT HTTP "+response.status);
