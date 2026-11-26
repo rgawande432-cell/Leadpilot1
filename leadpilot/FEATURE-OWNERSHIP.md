@@ -1,0 +1,44 @@
+# LeadPilot feature ownership and duplicate-prevention audit
+
+This document is the development guardrail: **upgrade the canonical feature instead of creating another implementation**. Before adding or changing functionality, inspect this map and update it if ownership changes.
+
+## Canonical shared engines
+
+| Capability | Canonical implementation | Compatibility / callers |
+|---|---|---|
+| Lead scoring | `supabase/functions/_shared/lead-scoring.js` | `backend/src/lead-scoring.js` re-exports it; enquiry intake and Phase 32–35 use it |
+| GDELT JSON response parsing | `supabase/functions/_shared/gdelt-response.js` | Discovery worker and public intent search |
+| Google News RSS parsing | `supabase/functions/_shared/google-news-rss.js` | Discovery worker and public intent search |
+| Lead validation | `backend/src/lead-validation.js` | Backend processing and legacy growth capture adapter |
+| Lead deduplication | `backend/src/lead-deduplication.js` | Backend pipeline and legacy growth adapter; matching is business-scoped |
+| Public enquiry intake | `supabase/functions/submit-lead/index.ts` | One intake path; database rate-limit and duplicate RPCs guard persistence |
+| Scheduled discovery processing | `supabase/functions/leadpilot-discovery-worker/index.ts` | Queue-claimed jobs and shared response parsers |
+| Owner-triggered discovery scan | `supabase/functions/process-discovery-scan/index.ts` | Separate trigger/auth path; do not create another worker—share processing logic when refactoring |
+| Public intent candidate search | `supabase/functions/public-intent-search/index.ts` | Search candidates only; not verified leads or auto-CRM contacts |
+| Public customer directory search | `supabase/functions/public-business-search/index.ts` | Business opt-in directory endpoint; not a second business-profile system |
+
+## Phase modules (not connected to the live UI unless explicitly wired)
+
+- `leadpilot/phase28-31/features.js`: profile heuristics and growth-plan prototype.
+- `leadpilot/phase32-35/growth-lead-tools.js`: legacy adapters and profile-based suggestions. Lead capture validation, scoring, and duplicate checks delegate to canonical shared/backend helpers.
+- `leadpilot/phase36-39/*`: draft repurposing, quality checks, and distribution planning stages; keep these as separate workflow stages, not separate lead-acquisition engines.
+- `leadpilot/phase40-43/*`: lead-pattern-to-content workflow stages and aggregator; these analyze enquiry patterns and prepare content drafts/backlog, not acquisition itself.
+
+## Audit status
+
+- [x] Removed identical duplicate GDELT parser implementation; one shared parser remains and is used by both discovery search paths.
+- [x] Consolidated Google News RSS parsing into one shared utility.
+- [x] Consolidated live intake and legacy growth lead scoring into one shared scoring engine.
+- [x] Legacy lead capture validation delegates to canonical validation.
+- [x] Legacy duplicate check delegates to canonical business-scoped dedupe.
+- [x] Added regression tests for these consolidations.
+- [ ] Complete full UI/API/DB ownership audit and review all disconnected phase modules before future feature additions.
+- [ ] Verify Supabase Edge Function type-check and PR CI; this audit session could not run Deno checks and GitHub Actions checks were not returned.
+
+## Required workflow for future changes
+
+1. Search this ownership map, code, API routes, database tables, and UI before creating a feature.
+2. If a feature exists, update its canonical implementation and callers.
+3. If a phase utility is not wired into the app, do not present it as live; decide whether to connect, merge, or retire it before duplicating its capability.
+4. Add regression tests and update this ownership map with any consolidation.
+5. Do not deploy or merge while required checks are unverified or failing.
