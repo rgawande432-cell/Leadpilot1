@@ -45,6 +45,8 @@ footer{margin-top:45px;border-top:1px solid #e1e7f0;padding:25px 0;color:#7b879a
 }
 
 .radar-box{margin:16px 0;background:#fff;border:1px solid #dbe5f5;border-radius:16px;padding:20px}.radar-queries{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.query-chip{background:#edf2ff;color:#2457d6;border-radius:20px;padding:8px 11px;font-size:13px}.radar-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.radar-result{border:1px solid #e1e8f3;border-radius:12px;padding:13px;margin:10px 0}.radar-score{font-weight:bold;color:#2457d6}.radar-muted{font-size:12px;color:#7b879a}.radar-results{max-height:440px;overflow:auto}@media(max-width:720px){.radar-grid{grid-template-columns:1fr}}
+
+.ai-activation{border:2px solid #b9ccff;background:linear-gradient(135deg,#f2f6ff,#fff);border-radius:18px;padding:20px;margin:18px 0}.ai-activation h2{margin:6px 0}.activation-controls{display:grid;grid-template-columns:1fr 1fr;gap:12px}.activation-state{border-radius:12px;background:#edf8f1;color:#1c7a42;padding:12px;margin-top:12px}.activation-state.pending{background:#fff5e7;color:#935800}@media(max-width:720px){.activation-controls{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -102,7 +104,9 @@ footer{margin-top:45px;border-top:1px solid #e1e7f0;padding:25px 0;color:#7b879a
 <div class="card">New enquiries<h2 id="newTotal">0</h2></div>
 <div class="card">Business profile<h2 id="saved">Saved</h2></div>
 </div>
-<div class="panel" style="margin:0 0 16px"><h3>Enquiry insights</h3><p class="small">Based only on real enquiries saved in your account.</p><div id="leadInsights" class="cards" style="margin:10px 0"></div></div>
+
+<div class="ai-activation" id="aiActivation"><span class="tag">AI business growth activation</span><h2>🚀 AI Generate Leads & Enquiries</h2><p>Choose what your business needs. LeadPilot will prepare its business-specific organic discovery plan and signal-verification workflow. Automated live source collection is still being connected and will not invent leads.</p><div class="activation-controls"><div class="field"><label>AI goal (suggested by business type)</label><select id="aiGoal"><option value="leads">Find potential leads</option><option value="enquiries">Generate customer enquiries</option><option value="sales">Drive sales intent</option></select></div><div class="field"><label>Discovery target area</label><input id="aiArea" placeholder="Business area/location"></div></div><div class="actions"><button class="btn" id="aiActivateBtn">AI Generate — Start discovery setup</button><button class="btn alt" id="aiStopBtn">Pause discovery setup</button></div><div id="aiActivationState" class="activation-state pending">Not activated yet. Configure your goal and activate.</div><div id="aiPlan" class="hidden"></div></div>
+\n<div class="panel" style="margin:0 0 16px"><h3>Enquiry insights</h3><p class="small">Based only on real enquiries saved in your account.</p><div id="leadInsights" class="cards" style="margin:10px 0"></div></div>
 <div class="grid">
 <div class="panel">
 <div class="bar"><h3>Customer enquiries</h3><div class="actions"><button class="btn alt" id="shareEnquiryBtn">Copy public enquiry link</button><button class="btn alt" id="exportLeadsBtn">Export CSV</button><button class="btn alt" id="refreshBtn">Refresh</button></div></div>
@@ -232,7 +236,10 @@ f.elements.services.value=(biz?.services||[]).join(', ');
 }
 
 
-function radarSetup(){
+
+function activationSetup(){const key='leadpilot_ai_activation_'+biz.id;const category=((biz.business_type||'')+' '+(biz.niche||'')+' '+(biz.services||[]).join(' ')).toLowerCase();let suggested=category.includes('retail')||category.includes('shop')||category.includes('product')?'sales':category.includes('marketing')||category.includes('service')?'leads':'enquiries';const prior=(()=>{try{return JSON.parse(localStorage.getItem(key)||'null')}catch{return null}})();$('aiGoal').value=prior?.goal||suggested;$('aiArea').value=prior?.area||biz.location||'';function statusRender(cfg){if(!cfg){ $('aiActivationState').className='activation-state pending';$('aiActivationState').textContent='Not activated yet. Configure your goal and activate.';$('aiPlan').classList.add('hidden');return;} $('aiActivationState').className='activation-state';$('aiActivationState').textContent='Setup activated locally · Goal: '+cfg.goal+' · Area: '+cfg.area+' · Activated: '+new Date(cfg.activatedAt).toLocaleString();const keyword=(biz.niche||biz.business_type||'business');const qs=['looking for '+keyword+' in '+cfg.area,'need '+keyword+' near '+cfg.area,'recommend '+keyword+' '+cfg.area,'price enquiry '+keyword+' '+cfg.area,'best '+keyword+' '+cfg.area];$('aiPlan').classList.remove('hidden');$('aiPlan').innerHTML='<h3>AI discovery plan preview</h3><p>Business: '+esc(biz.name)+' · Goal: '+esc(cfg.goal)+' · Suggested signal sources: permitted public request forums, opt-in enquiry channels, business-owned social inbox and approved APIs.</p><ul>'+qs.map(q=>'<li>'+esc(q)+'</li>').join('')+'</ul><p class="small">This is a setup plan only—not live lead collection. Source integrations, verification and daily automation must be implemented before the system can report actual collected leads.</p>';}
+$('aiActivateBtn').onclick=()=>{const cfg={goal:$('aiGoal').value,area:$('aiArea').value.trim()||biz.location||'Local area',activatedAt:new Date().toISOString(),status:'setup'};localStorage.setItem(key,JSON.stringify(cfg));statusRender(cfg);};$('aiStopBtn').onclick=()=>{localStorage.removeItem(key);statusRender(null);};statusRender(prior);}
+\nfunction radarSetup(){
 const area=biz.location||'your area',business=biz.name||'local business',niche=biz.niche||biz.business_type||'products/services',services=(biz.services||[]).join(' OR ')||niche;
 const queries=[`"${niche}" looking for ${area}`, `need ${services} near ${area}`, `recommend ${niche} ${area}`, `where can I get ${niche} ${area}`, `price enquiry ${niche} ${area}`, `looking for ${services} ${area}`];
 $('radarQueries').innerHTML=queries.map(q=>'<span class="query-chip">'+esc(q)+'</span>').join('');
@@ -264,7 +271,7 @@ const p=await db.from('businesses').select('*').eq('owner_user_id',user.id).orde
 if(p.error){say('businessMsg','Profile error: '+p.error.message);return;}
 biz=p.data;
 if(!biz){fill();show('businessModal');return;}
-show('dashboard');$('welcome').textContent='Welcome, '+biz.name;$('heroProfile').textContent='Saved';ideas();radarSetup();
+show('dashboard');$('welcome').textContent='Welcome, '+biz.name;$('heroProfile').textContent='Saved';ideas();radarSetup();activationSetup();
 const q=await db.from('leads').select('id,name,email,phone,message,source,status,score,created_at').eq('business_id',biz.id).order('created_at',{ascending:false});
 if(q.error){$('leadRows').textContent='Could not load enquiries: '+q.error.message;return;}
 const ls=q.data||[],fresh=ls.filter(x=>x.status==='New').length;
