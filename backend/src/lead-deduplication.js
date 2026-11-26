@@ -1,5 +1,5 @@
 function normalizePhone(phone = "") {
-  return String(phone).replace(/\D/g, "");
+  const digits = String(phone).replace(/\D/g, "");\n  return digits.length === 12 && digits.startsWith("91") ? digits.slice(2) : digits;
 }
 
 function normalizeEmail(email = "") {
