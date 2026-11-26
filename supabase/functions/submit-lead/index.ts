@@ -40,6 +40,12 @@ function scoreLead(message: string, phone: string, email: string) {
   return { score, priority, intentLevel, breakdown, reasons, disclaimer: "Heuristic lead priority score based on submitted details; not a verified conversion probability." };
 }
 
+function qualificationFromScore(score: number) {
+  if (score >= 70) return { status: "High intent - review", delayHours: 24, note: "Strong enquiry signals detected. Owner review and follow-up recommended within 24 hours." };
+  if (score >= 40) return { status: "Needs review", delayHours: 48, note: "Moderate enquiry signals detected. Owner review and follow-up recommended within 48 hours." };
+  return { status: "Low signal - review", delayHours: 72, note: "Limited enquiry signals detected. Review details before deciding whether to follow up." };
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return respond(405, { success: false, error: "POST required" });
@@ -97,14 +103,26 @@ Deno.serve(async (req: Request) => {
 
     const scoring = scoreLead(message, phone, email);
     const { score, priority } = scoring;
+    const qualification = qualificationFromScore(score);
+    const followupAt = new Date(Date.now() + qualification.delayHours * 60 * 60 * 1000).toISOString();
     const { data: lead, error: insertError } = await db.from("leads").insert({
       business_id: businessId, name, phone: phone || null, email: email || null,
-      message, source, score, intent_level: scoring.intentLevel, score_breakdown: scoring.breakdown, score_reasons: scoring.reasons, score_disclaimer: scoring.disclaimer, status: "New", consent_at: new Date().toISOString(), consent_text: consentText,
-    }).select("id,business_id,name,email,phone,message,source,status,score,created_at").single();
+      message, source, score, intent_level: scoring.intentLevel, score_breakdown: scoring.breakdown, score_reasons: scoring.reasons, score_disclaimer: scoring.disclaimer, status: "New", qualification_status: qualification.status, qualification_notes: qualification.note, followup_at: followupAt, consent_at: new Date().toISOString(), consent_text: consentText,
+    }).select("id,business_id,name,email,phone,message,source,status,score,qualification_status,qualification_notes,followup_at,created_at").single();
 
     if (insertError?.code === "23505") return respond(409, { success: false, duplicate: true, error: "An enquiry from this contact already exists" });
     if (insertError) return respond(500, { success: false, error: "Could not save enquiry" });
-    return respond(201, { success: true, lead, priority, intentLevel: scoring.intentLevel, scoreBreakdown: scoring.breakdown, scoreReasons: scoring.reasons, scoreDisclaimer: scoring.disclaimer });
+
+    // Schedule a consent-based owner reminder; this never contacts the lead automatically.
+    const { data: followup, error: followupError } = await db.from("leadpilot_followups").insert({
+      business_id: businessId,
+      lead_id: lead.id,
+      lead_reference: lead.id,
+      due_at: followupAt,
+      note: qualification.note,
+    }).select("id,due_at").single();
+
+    return respond(201, { success: true, lead, priority, qualification: qualification.status, followupScheduled: !followupError, followup: followup || null, followupError: followupError ? "Reminder scheduling failed; enquiry saved successfully." : null, intentLevel: scoring.intentLevel, scoreBreakdown: scoring.breakdown, scoreReasons: scoring.reasons, scoreDisclaimer: scoring.disclaimer });
   } catch (_error) {
     return respond(400, { success: false, error: "Invalid request body" });
   }
