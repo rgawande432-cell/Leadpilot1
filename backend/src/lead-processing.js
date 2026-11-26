@@ -32,7 +32,7 @@ export function processLead(input = {}, existingLeads = []) {
   };
 
   // 2. Spam screening
-  const spamCheck = checkSpam(cleanedLead);
+  const spamCheck = checkSpam({ ...cleanedLead, ...input });
 
   if (spamCheck.isSpam) {
     return {
