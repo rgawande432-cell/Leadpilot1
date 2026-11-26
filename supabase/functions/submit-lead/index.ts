@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { qualificationFromScore } from "./qualification.js";
+import { scoreLead } from "../../../backend/src/lead-scoring.js";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -15,31 +16,6 @@ const respond = (status: number, payload: unknown) =>
 const normalizePhone = (v = "") => String(v).replace(/\D/g, "");
 const normalizeEmail = (v = "") => String(v).trim().toLowerCase();
 
-function scoreLead(message: string, phone: string, email: string) {
-  const text = message.toLowerCase();
-  let score = 0;
-  const breakdown: Record<string, number> = {};
-  const reasons: string[] = [];
-  if (phone) { score += 20; breakdown.phone = 20; reasons.push("Phone number provided"); }
-  if (email) { score += 10; breakdown.email = 10; reasons.push("Email provided"); }
-  if (message.length >= 20) { score += 15; breakdown.message_detail = 15; reasons.push("Detailed enquiry"); }
-  if (["price","pricing","cost","buy","purchase","order","book","booking","availability","available","quote","quotation","rate","कीमत","कितना","खरीद","बुक","ऑर्डर","उपलब्ध","रेट","कोटेशन"].some(w => text.includes(w))) {
-    score += 25; breakdown.purchase_intent = 25; reasons.push("Purchase or booking intent detected");
-  }
-  if (["urgent","today","as soon as possible","immediately","aaj","abhi","jaldi","आज","अभी","जल्दी","तुरंत"].some(w => text.includes(w))) {
-    score += 15; breakdown.urgency = 15; reasons.push("Urgency mentioned");
-  }
-  if (["details","information","info","enquiry","inquiry","interested","जानकारी","पूछताछ","डिटेल","विवरण"].some(w => text.includes(w))) {
-    score += 10; breakdown.information_intent = 10; reasons.push("Information interest detected");
-  }
-  if (["delivery","install","service","visit","appointment","demo","डिलीवरी","इंस्टॉल","सर्विस","विजिट","अपॉइंटमेंट"].some(w => text.includes(w))) {
-    score += 10; breakdown.service_action = 10; reasons.push("Delivery or service action requested");
-  }
-  score = Math.min(score, 100);
-  const priority = score >= 70 ? "High" : score >= 40 ? "Medium" : "Low";
-  const intentLevel = score >= 70 ? "Strong signals" : score >= 40 ? "Moderate signals" : "Limited signals";
-  return { score, priority, intentLevel, breakdown, reasons, disclaimer: "Heuristic lead priority score based on submitted details; not a verified conversion probability." };
-}
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
@@ -96,7 +72,7 @@ Deno.serve(async (req: Request) => {
     if (duplicateError) return respond(500, { success: false, error: "Duplicate check failed" });
     if (duplicate) return respond(409, { success: false, duplicate: true, error: "An enquiry from this contact already exists" });
 
-    const scoring = scoreLead(message, phone, email);
+    const scoring = scoreLead({ message, phone, email, source });
     const { score, priority } = scoring;
     const qualification = qualificationFromScore(score);
     const followupAt = new Date(Date.now() + qualification.delayHours * 60 * 60 * 1000).toISOString();
