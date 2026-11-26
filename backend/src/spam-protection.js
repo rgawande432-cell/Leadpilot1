@@ -27,7 +27,7 @@ export function checkSpam(input = {}) {
     /\b(casino|lottery|crypto giveaway)\b/i,
     /\b(earn money fast|click here now)\b/i,
     /\b(instant loan|guaranteed profit|free prize)\b/i,
-    /\b(जल्दी अमीर|मुफ्त इनाम|लॉटरी जीत|पैसे कमाएं)\b/i
+    /(जल्दी अमीर|मुफ्त इनाम|लॉटरी जीत|पैसे कमाएं)/i
   ];
   if (spamPatterns.some(pattern => pattern.test(message))) reasons.push("Suspicious spam content");
 
