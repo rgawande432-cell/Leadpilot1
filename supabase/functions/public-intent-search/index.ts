@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type","Access-Control-Allow-Methods":"POST, OPTIONS"};
-const json=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{...cors,"Content-Type":"application/json"}});
+const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...cors,"Content-Type":"application/json"}});
 Deno.serve(async(req)=>{
  if(req.method==="OPTIONS")return new Response("ok",{headers:cors});
  if(req.method!=="POST")return json({error:"POST required"},405);
@@ -23,7 +23,8 @@ Deno.serve(async(req)=>{
  const area=body.area||business.location||"India";
  const services=(business.services||[]).slice(0,4).join(" ")||niche;
  const queries=[`"${niche}" looking for ${area}`,`need ${services} near ${area}`,`"${niche}" price quote ${area}`,`recommend ${niche} ${area}`,`"${niche}" buyer requirement ${area}`];
- const results=[];
+ const results:Array<{query:string,title:string,url:string,snippet:string,source_domain:string}> = [];
+ try{
  for(const query of queries){
   const endpoint=new URL("https://api.search.brave.com/res/v1/web/search");
   endpoint.searchParams.set("q",query);endpoint.searchParams.set("country","IN");endpoint.searchParams.set("search_lang","en");endpoint.searchParams.set("count","5");endpoint.searchParams.set("freshness","pm");
@@ -32,6 +33,7 @@ Deno.serve(async(req)=>{
   const data=await response.json();
   for(const item of (data.web?.results||[])){try{const parsed=new URL(item.url);if(!["http:","https:"].includes(parsed.protocol))continue;results.push({query,title:item.title||"",url:parsed.href,snippet:item.description||"",source_domain:parsed.hostname});}catch{continue;}}
  }
+ }catch(_error){return json({status:"provider_error",message:"Search provider connection failed. Verify the key, quota and provider status."},502);}
  const unique=[...new Map(results.filter(r=>r.url).map(r=>[r.url,r])).values()];
  return json({status:"candidates_found",business:{name:business.name,area,niche,services},queries,results:unique.slice(0,25),count:unique.length,warning:"Search snippets are unverified candidates, not confirmed leads. Review source page, consent and relevance before saving. No contacts are scraped and no CRM leads are automatically created."});
 });
