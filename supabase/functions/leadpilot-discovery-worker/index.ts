@@ -58,8 +58,12 @@ Deno.serve(async(req)=>{
      }
      for(const result of [...new Map(articles.filter((x:any)=>x.url).map((x:any)=>[x.url,x])).values()].slice(0,20)){
       const evidence=(result.title+" — "+result.domain+" — "+result.date).slice(0,1800),txt=clean(evidence);
-      const intent=/(looking for|need a|need an|want to buy|buying|purchase|hire|quote|quotation|price for|available for|request for|seeking)/i.test(txt)?"explicit":/(which|where|recommend|suggest|anyone know|how much|best|options|can anyone|who provides)/i.test(txt)?"question":"research";
-      if(intent==="research")continue;
+      // Conservative signal policy: news/article wording is not itself buyer intent.
+      // Only explicit, first-person/request-style phrases qualify for pending review.
+      const explicitIntent=/(looking for|need a|need an|need to buy|want to buy|want to purchase|buying|purchase|hire|quote|quotation|price for|request for|seeking|can you supply|where can i buy|who can provide)/i.test(result.title||"");
+      const excludedContext=/(job opening|hiring|career|launch(ed)?|new product|review|award|festival|event|stock market|funding|investment|company profile)/i.test(result.title||"");
+      const intent=explicitIntent&&!excludedContext?"explicit":"research";
+      if(intent!=="explicit")continue;
       const matches=[...new Set(terms)].filter((t:string)=>txt.includes(t));
       if(matches.length===0)continue;
       const score=Math.min(60,(intent==="explicit"?38:28)+Math.min(16,matches.length*5));
