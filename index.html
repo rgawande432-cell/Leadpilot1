@@ -176,7 +176,7 @@ footer{margin-top:45px;border-top:1px solid #e1e7f0;padding:25px 0;color:#7b879a
 <div class="field"><label>Target audience</label><input name="audience"></div>
 </div>
 <div class="field"><label>Products / services (comma separated)</label><input name="services"></div>
-<div class="field"><label>Business description</label><textarea name="description"></textarea></div>
+<div class="field"><label>Business description</label><textarea name="description"></textarea></div><div class="field"><label><input name="public_listing_enabled" type="checkbox" style="width:auto"> Show my business in LeadPilot customer discovery (opt-in)</label><p class="small">Customers can discover your business profile and send an enquiry. Off by default.</p></div><div class="field"><label><input name="public_phone_enabled" type="checkbox" style="width:auto"> Display my business phone publicly</label><p class="small">Phone is shown only if you opt in separately. Enquiries remain available even when phone is hidden.</p></div>
 <button class="btn" id="saveBtn">Save business profile</button>
 <p id="businessMsg" role="status"></p>
 </form>
@@ -244,6 +244,8 @@ function fill(){
 const f=$('businessForm');
 ['name','business_type','niche','location','phone','email','website','audience','description'].forEach(k=>f.elements[k].value=biz?.[k]||'');
 f.elements.services.value=(biz?.services||[]).join(', ');
+f.elements.public_listing_enabled.checked=!!biz?.public_listing_enabled;
+f.elements.public_phone_enabled.checked=!!biz?.public_phone_enabled;
 }
 
 
@@ -399,6 +401,8 @@ website:v('website')||null,
 phone:v('phone')||null,
 email:v('email')||null,
 services:v('services').split(',').map(x=>x.trim()).filter(Boolean),
+public_listing_enabled:f.get('public_listing_enabled')==='on',
+public_phone_enabled:f.get('public_phone_enabled')==='on' && f.get('public_listing_enabled')==='on',
 updated_at:new Date().toISOString()
 };
 
