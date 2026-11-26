@@ -39,7 +39,7 @@ Deno.serve(async(req)=>{
    articles=parseRss(await rss.text());
   }
   const uniqueMap=new Map<string,{title:string,url:string,domain:string,date:string}>();
-  for(const item of articles){try{const u=new URL(item.url);if(!["http:","https:"].includes(u.protocol))continue;uniqueMap.set(u.href,{title:item.title||"",url:u.href,domain:item.domain||u.hostname,date:item.seendate||item.date||"");}catch{}}
+  for(const item of articles){try{const u=new URL(item.url);if(!["http:","https:"].includes(u.protocol))continue;uniqueMap.set(u.href,{title:item.title||"",url:u.href,domain:item.domain||u.hostname,date:item.seendate||item.date||""});}catch{}}
   const unique=[...uniqueMap.values()];
   results=unique.slice(0,25).map(r=>({query,title:r.title,url:r.url,snippet:"",source_domain:r.domain,date:r.date}));
  }catch{return json({status:"provider_error",message:"Free search provider and RSS fallback connection failed."},502);}
