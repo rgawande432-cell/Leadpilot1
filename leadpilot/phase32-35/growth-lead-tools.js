@@ -1,3 +1,7 @@
+import { validateLead } from "../../backend/src/lead-validation.js";
+import { scoreLead as sharedScoreLead } from "../../backend/src/lead-scoring.js";
+import { findDuplicateLead } from "../../backend/src/lead-deduplication.js";
+
 /**
  * LeadPilot AI — Phase 32–35
  * Profile-based suggestions and lead scoring.
@@ -67,32 +71,13 @@ export function suggestKeywordClusters(profile = {}) {
 
 // STEP 34 — LEAD CAPTURE
 export function createLeadRecord(input = {}) {
-  const name = String(input.name || "").trim();
-  const email = String(input.email || "").trim().toLowerCase();
-  const phone = String(input.phone || "").trim();
-  const message = String(input.message || "").trim();
+  const validation = validateLead(input);
   const source = String(input.source || "unknown").trim();
-
-  const errors = [];
-
-  if (!name) errors.push("name");
-
-  if (!email && !phone) {
-    errors.push("email_or_phone");
-  }
-
-  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    errors.push("email_format");
-  }
-
   return {
-    valid: errors.length === 0,
-    errors,
+    valid: validation.valid,
+    errors: validation.errors,
     lead: {
-      name,
-      email,
-      phone,
-      message,
+      ...validation.cleaned,
       source,
       status: "new",
       createdAt: input.createdAt || null
@@ -102,80 +87,21 @@ export function createLeadRecord(input = {}) {
 
 // STEP 35 — LEAD QUALITY SCORING
 export function scoreLead(input = {}) {
-  const message = String(input.message || "").toLowerCase();
-  const source = String(input.source || "").toLowerCase();
-
-  let score = 0;
-  const signals = [];
-
-  const rules = [
-    ["pricing", /price|pricing|cost|quote|budget/, 15],
-    ["contact_intent", /call|contact|book|appointment|order/, 15],
-    ["specific_need", /need|looking for|want|require/, 15],
-    ["time_sensitive", /today|urgent|this week|asap/, 20]
-  ];
-
-  for (const [signal, regex, points] of rules) {
-    if (regex.test(message)) {
-      score += points;
-      signals.push(signal);
-    }
-  }
-
-  if (input.email) {
-    score += 10;
-    signals.push("email_provided");
-  }
-
-  if (input.phone) {
-    score += 10;
-    signals.push("phone_provided");
-  }
-
-  if (source && source !== "unknown") {
-    score += 5;
-    signals.push("source_known");
-  }
-
-  score = Math.min(score, 100);
-
-  let quality = "low";
-
-  if (score >= 60) quality = "high";
-  else if (score >= 30) quality = "medium";
-
+  const result = sharedScoreLead(input);
+  const quality = result.priority === "High" ? "high" : result.priority === "Medium" ? "medium" : "low";
   return {
-    score,
+    score: result.score,
     quality,
-    signals,
-    note: "Heuristic score only; this is not a verified conversion probability."
+    signals: result.reasons.filter(reason => !reason.startsWith("Source recorded:")),
+    note: result.disclaimer
   };
 }
 
 // DUPLICATE LEAD CHECK
 export function detectDuplicateLead(candidate = {}, existing = []) {
-  const email = String(candidate.email || "").trim().toLowerCase();
-  const phone = String(candidate.phone || "").replace(/\D/g, "");
-
-  const match = existing.find(record => {
-    const oldEmail = String(record.email || "").trim().toLowerCase();
-    const oldPhone = String(record.phone || "").replace(/\D/g, "");
-
-    return (
-      (email && email === oldEmail) ||
-      (phone && phone === oldPhone)
-    );
-  });
-
+  const result = findDuplicateLead(candidate, existing);
   return {
-    duplicate: Boolean(match),
-    matchedBy: match
-      ? (
-          email &&
-          String(match.email || "").trim().toLowerCase() === email
-            ? "email"
-            : "phone"
-        )
-      : null
+    duplicate: result.duplicate,
+    matchedBy: result.matchedBy || null
   };
 }
