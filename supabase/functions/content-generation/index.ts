@@ -32,10 +32,10 @@ Deno.serve(async(req)=>{
  if(!businessId)return json({error:"business_id required"},400);
  const {data:business,error:bErr}=await userClient.from("businesses").select("id,name,owner_user_id,business_type,niche,description,location,services,phone,website").eq("id",businessId).single();
  if(bErr||business.owner_user_id!==user.id)return json({error:"Business access denied"},403);
- const key=Deno.env.get("OPENAI_API_KEY");
- if(!key)return json({status:"provider_disconnected",error:"OPENAI_API_KEY is not configured in Supabase Edge Function Secrets. Template content is available; AI generation is disabled until a key is configured."},503);
  const type=String(body.type||"posts");
  if(!["posts","faq","campaign"].includes(type))return json({error:"Unsupported content type"},400);
+ const key=Deno.env.get("OPENAI_API_KEY");
+ if(!key){const fallback=freeTemplates(business,type,body);return json({status:"template_generated",type,model:"free-local-template-engine",content:fallback.content,language:fallback.language,disclaimer:fallback.disclaimer});}
  const model=Deno.env.get("OPENAI_MODEL")||"gpt-6.2-astra";
  const services=Array.isArray(business.services)?business.services.join(", "):String(business.services||"");
  const instructions="You are an organic local-business marketing assistant. Produce truthful, non-spammy content in the language requested. Do not invent prices, guarantees, certifications, offers, reviews, customer stories, availability or facts. Keep it local and useful, avoid exaggerated claims and ad-like pressure. Use the supplied business details only. If details are missing, ask questions rather than fabricate.";
