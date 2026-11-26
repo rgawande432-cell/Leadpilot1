@@ -38,7 +38,7 @@ Deno.serve(async(req)=>{
    const area=cfg.area||biz.location||"India";
    const serviceWords=(biz.services||[]).slice(0,3).join(" ")||category;
    const keywords=(cfg.keywords||[]).slice(0,3).map((k:string)=>String(k));
-   const queries=[`"${category}" looking for ${area}`,`need ${serviceWords} near ${area}`,`"${category}" quote request ${area}`,...keywords.map(k=>k+" "+area+" enquiry")].slice(0,3);
+   const queries=[`"${category}" looking for ${area}`,`need ${serviceWords} near ${area}`,`"${category}" quote request ${area}`,...keywords.map((k:string)=>k+" "+area+" enquiry")].slice(0,3);
    let savedCount=0,externalStatus=apiKey?(braveApproved?"connected":"source_disabled"):"disconnected",errorText=apiKey&&!braveApproved?"Brave source is disabled or terms review is incomplete. Enable it only after owner approval.":"";
    if(apiKey&&braveApproved){
     try{
