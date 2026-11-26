@@ -11,7 +11,6 @@ export function checkSpam(input = {}) {
   const phone = String(input.phone || "").trim();
   const reasons = [];
 
-  // Bot honeypot fields: any non-empty value is treated as spam.
   const honeypot = ["website_check", "websiteCheck", "company_url", "fax"].some(
     field => String(input[field] || "").trim().length > 0
   );
@@ -19,23 +18,18 @@ export function checkSpam(input = {}) {
 
   if (!name || (!email && !phone)) reasons.push("Missing contact information");
   if (message.length > MAX_MESSAGE_LENGTH) reasons.push("Message exceeds allowed length");
+  if (message.length >= 20 && /^(.)\1+$/.test(message)) reasons.push("Repeated character spam");
 
-  if (message.length >= 20 && /^(.)\\1+$/.test(message)) {
-    reasons.push("Repeated character spam");
-  }
-
-  const links = message.match(/https?:\\/\\/\\S+/gi) || [];
+  const links = message.match(/https?:\/\/\S+/gi) || [];
   if (links.length > 3) reasons.push("Too many links");
 
   const spamPatterns = [
-    /\\b(casino|lottery|crypto giveaway)\\b/i,
-    /\\b(earn money fast|click here now)\\b/i,
-    /\\b(instant loan|guaranteed profit|free prize)\\b/i,
-    /\\b(जल्दी अमीर|मुफ्त इनाम|लॉटरी जीत|पैसे कमाएं)\\b/i
+    /\b(casino|lottery|crypto giveaway)\b/i,
+    /\b(earn money fast|click here now)\b/i,
+    /\b(instant loan|guaranteed profit|free prize)\b/i,
+    /\b(जल्दी अमीर|मुफ्त इनाम|लॉटरी जीत|पैसे कमाएं)\b/i
   ];
-  if (spamPatterns.some(pattern => pattern.test(message))) {
-    reasons.push("Suspicious spam content");
-  }
+  if (spamPatterns.some(pattern => pattern.test(message))) reasons.push("Suspicious spam content");
 
   return { isSpam: reasons.length > 0, reasons };
 }
