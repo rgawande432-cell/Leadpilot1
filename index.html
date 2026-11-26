@@ -272,7 +272,7 @@ $('heroProfile').textContent='Saved';
 ideas();
 
 const q=await db.from('leads')
-.select('id,name,email,phone,message,source,status,created_at')
+.select('id,name,email,phone,message,source,status,score,created_at')
 .eq('business_id',biz.id)
 .order('created_at',{ascending:false})
 .limit(100);
@@ -291,7 +291,7 @@ $('heroCount').textContent=ls.length;
 $('heroNew').textContent=fresh;
 
 $('leadRows').innerHTML=ls.length?ls.map(l=>
-'<div class="row"><div class="bar"><b>'+esc(l.name)+'</b><span class="pill">'+esc(l.status)+'</span></div><p>'+esc(l.message)+'</p><p class="small">'+esc(l.phone||l.email||'No contact')+' · '+esc(l.source||'Enquiry')+'</p><select data-id="'+l.id+'"><option '+(l.status==='New'?'selected':'')+'>New</option><option '+(l.status==='Qualified'?'selected':'')+'>Qualified</option><option '+(l.status==='Follow-up'?'selected':'')+'>Follow-up</option><option '+(l.status==='Contacted'?'selected':'')+'>Contacted</option><option '+(l.status==='Won'?'selected':'')+'>Won</option><option '+(l.status==='Lost'?'selected':'')+'>Lost</option></select></div>'
+'<div class="row"><div class="bar"><b>'+esc(l.name)+'</b><span class="pill">'+esc(l.status)+'</span></div><p>'+esc(l.message)+'</p><p class="small">'+esc(l.phone||l.email||'No contact')+' · '+esc(l.source||'Enquiry')+' · Lead score: '+Number(l.score||0)+'/100</p><select data-id="'+l.id+'"><option '+(l.status==='New'?'selected':'')+'>New</option><option '+(l.status==='Qualified'?'selected':'')+'>Qualified</option><option '+(l.status==='Follow-up'?'selected':'')+'>Follow-up</option><option '+(l.status==='Contacted'?'selected':'')+'>Contacted</option><option '+(l.status==='Won'?'selected':'')+'>Won</option><option '+(l.status==='Lost'?'selected':'')+'>Lost</option></select></div>'
 ).join(''):'<p>No customer enquiries yet. New customer enquiries linked to this business will appear here.</p>';
 
 $('leadRows').querySelectorAll('select[data-id]').forEach(s=>
