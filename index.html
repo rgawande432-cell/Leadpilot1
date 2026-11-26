@@ -100,6 +100,7 @@ footer{margin-top:45px;border-top:1px solid #e1e7f0;padding:25px 0;color:#7b879a
 <div class="card">New enquiries<h2 id="newTotal">0</h2></div>
 <div class="card">Business profile<h2 id="saved">Saved</h2></div>
 </div>
+<div class="panel" style="margin:0 0 16px"><h3>Enquiry insights</h3><p class="small">Based only on real enquiries saved in your account.</p><div id="leadInsights" class="cards" style="margin:10px 0"></div></div>
 <div class="grid">
 <div class="panel">
 <div class="bar"><h3>Customer enquiries</h3><div class="actions"><button class="btn alt" id="shareEnquiryBtn">Copy public enquiry link</button><button class="btn alt" id="exportLeadsBtn">Export CSV</button><button class="btn alt" id="refreshBtn">Refresh</button></div></div>
@@ -253,6 +254,11 @@ show('dashboard');$('welcome').textContent='Welcome, '+biz.name;$('heroProfile')
 const q=await db.from('leads').select('id,name,email,phone,message,source,status,score,created_at').eq('business_id',biz.id).order('created_at',{ascending:false});
 if(q.error){$('leadRows').textContent='Could not load enquiries: '+q.error.message;return;}
 const ls=q.data||[],fresh=ls.filter(x=>x.status==='New').length;
+const statuses=['New','Qualified','Follow-up','Contacted','Won','Lost'];
+const sourceCounts={};ls.forEach(x=>{const src=x.source||'Unknown';sourceCounts[src]=(sourceCounts[src]||0)+1;});
+const maxStatus=Math.max(1,...statuses.map(st=>ls.filter(x=>x.status===st).length));
+$('leadInsights').innerHTML=statuses.map(st=>{const count=ls.filter(x=>x.status===st).length;return '<div class="stat"><span>'+esc(st)+'</span><strong>'+count+'</strong><div style="height:6px;background:#e7edf8;border-radius:5px;margin-top:8px"><div style="height:6px;width:'+Math.round(count/maxStatus*100)+'%;background:#2457d6;border-radius:5px"></div></div></div>';}).join('')+'<div class="stat"><span>Sources</span><strong>'+Object.keys(sourceCounts).length+'</strong><small>'+esc(Object.entries(sourceCounts).map(([k,v])=>k+': '+v).join(' | ')||'No sources yet')+'</small></div>';
+
 $('total').textContent=ls.length;$('newTotal').textContent=fresh;$('heroCount').textContent=ls.length;$('heroNew').textContent=fresh;
 function renderLeadRows(){
 const term=$('leadSearch').value.trim().toLowerCase(),status=$('leadStatusFilter').value;
