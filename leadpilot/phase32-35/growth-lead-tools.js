@@ -1,5 +1,5 @@
 import { validateLead } from "../../backend/src/lead-validation.js";
-import { scoreLead as sharedScoreLead } from "../../backend/src/lead-scoring.js";
+import { scoreLead as sharedScoreLead } from "../../supabase/functions/_shared/lead-scoring.js";
 import { findDuplicateLead } from "../../backend/src/lead-deduplication.js";
 
 /**
