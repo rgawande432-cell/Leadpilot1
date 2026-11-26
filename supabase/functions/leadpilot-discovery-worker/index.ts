@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { parseGdeltResponse } from "./gdelt-response.js";
 const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type, x-leadpilot-worker-token","Access-Control-Allow-Methods":"POST, OPTIONS"};
 const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...cors,"Content-Type":"application/json"}});
 const clean=(s:string)=>String(s||"").toLowerCase().replace(/\s+/g," ").trim().slice(0,600);
@@ -44,9 +45,10 @@ Deno.serve(async(req)=>{
      const response=await fetch(endpoint,{headers:{"Accept":"application/json"}});
      let fallbackReason="";
      if(response.ok){
-      const raw=await response.text();
-      try{const data=JSON.parse(raw);if(Array.isArray(data.articles)){articles=data.articles.map((x:any)=>({title:x.title||"",url:x.url||"",domain:x.domain||"",date:x.seendate||""}));provider="GDELT Project";}else fallbackReason="GDELT returned HTTP 200 without article data";}
-      catch{fallbackReason="GDELT returned HTTP 200 with non-JSON content";}
+      const parsed=parseGdeltResponse(await response.text());
+      articles=parsed.articles;
+      fallbackReason=parsed.fallbackReason;
+      if(articles.length)provider="GDELT Project";
      }else if(response.status===429||response.status>=500)fallbackReason="GDELT HTTP "+response.status;
      else throw new Error("GDELT HTTP "+response.status);
      if(fallbackReason||!articles.length){
