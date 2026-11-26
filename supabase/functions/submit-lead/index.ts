@@ -16,14 +16,28 @@ const normalizeEmail = (v = "") => String(v).trim().toLowerCase();
 
 function scoreLead(message: string, phone: string, email: string) {
   const text = message.toLowerCase();
-  let score = phone ? 20 : 0;
-  if (email) score += 10;
-  if (message.length >= 20) score += 15;
-  if (["price", "buy", "purchase", "order", "book", "availability", "quote", "quotation", "rate"].some(w => text.includes(w))) score += 25;
-  if (["urgent", "today", "aaj", "abhi", "jaldi", "immediately"].some(w => text.includes(w))) score += 15;
-  if (["details", "information", "info", "enquiry", "inquiry", "interested"].some(w => text.includes(w))) score += 10;
+  let score = 0;
+  const breakdown: Record<string, number> = {};
+  const reasons: string[] = [];
+  if (phone) { score += 20; breakdown.phone = 20; reasons.push("Phone number provided"); }
+  if (email) { score += 10; breakdown.email = 10; reasons.push("Email provided"); }
+  if (message.length >= 20) { score += 15; breakdown.message_detail = 15; reasons.push("Detailed enquiry"); }
+  if (["price","pricing","cost","buy","purchase","order","book","booking","availability","available","quote","quotation","rate","कीमत","कितना","खरीद","बुक","ऑर्डर","उपलब्ध","रेट","कोटेशन"].some(w => text.includes(w))) {
+    score += 25; breakdown.purchase_intent = 25; reasons.push("Purchase or booking intent detected");
+  }
+  if (["urgent","today","as soon as possible","immediately","aaj","abhi","jaldi","आज","अभी","जल्दी","तुरंत"].some(w => text.includes(w))) {
+    score += 15; breakdown.urgency = 15; reasons.push("Urgency mentioned");
+  }
+  if (["details","information","info","enquiry","inquiry","interested","जानकारी","पूछताछ","डिटेल","विवरण"].some(w => text.includes(w))) {
+    score += 10; breakdown.information_intent = 10; reasons.push("Information interest detected");
+  }
+  if (["delivery","install","service","visit","appointment","demo","डिलीवरी","इंस्टॉल","सर्विस","विजिट","अपॉइंटमेंट"].some(w => text.includes(w))) {
+    score += 10; breakdown.service_action = 10; reasons.push("Delivery or service action requested");
+  }
   score = Math.min(score, 100);
-  return { score, priority: score >= 70 ? "High" : score >= 40 ? "Medium" : "Low" };
+  const priority = score >= 70 ? "High" : score >= 40 ? "Medium" : "Low";
+  const intentLevel = score >= 70 ? "Strong signals" : score >= 40 ? "Moderate signals" : "Limited signals";
+  return { score, priority, intentLevel, breakdown, reasons, disclaimer: "Heuristic lead priority score based on submitted details; not a verified conversion probability." };
 }
 
 Deno.serve(async (req: Request) => {
@@ -81,7 +95,8 @@ Deno.serve(async (req: Request) => {
     if (duplicateError) return respond(500, { success: false, error: "Duplicate check failed" });
     if (duplicate) return respond(409, { success: false, duplicate: true, error: "An enquiry from this contact already exists" });
 
-    const { score, priority } = scoreLead(message, phone, email);
+    const scoring = scoreLead(message, phone, email);
+    const { score, priority } = scoring;
     const { data: lead, error: insertError } = await db.from("leads").insert({
       business_id: businessId, name, phone: phone || null, email: email || null,
       message, source, score, status: "New", consent_at: new Date().toISOString(), consent_text: consentText,
@@ -89,7 +104,7 @@ Deno.serve(async (req: Request) => {
 
     if (insertError?.code === "23505") return respond(409, { success: false, duplicate: true, error: "An enquiry from this contact already exists" });
     if (insertError) return respond(500, { success: false, error: "Could not save enquiry" });
-    return respond(201, { success: true, lead, priority });
+    return respond(201, { success: true, lead, priority, intentLevel: scoring.intentLevel, scoreBreakdown: scoring.breakdown, scoreReasons: scoring.reasons, scoreDisclaimer: scoring.disclaimer });
   } catch (_error) {
     return respond(400, { success: false, error: "Invalid request body" });
   }
