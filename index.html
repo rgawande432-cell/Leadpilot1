@@ -229,16 +229,23 @@ f.elements.services.value=(biz?.services||[]).join(', ');
 }
 
 function ideas(){
-const n=biz.niche||biz.business_type||'your products or services';
-const a=biz.location||'your area';
-const list=[
-'Introduce '+biz.name+' and explain how you help customers in '+a+'.',
-'Answer one common question about '+n+'.',
-'Share a simple tip customers should know before choosing '+n+'.',
-'Explain your service process, timings and contact options.'
+const niche=biz.niche||biz.business_type||'your products or services';
+const area=biz.location||'your local area';
+const name=biz.name||'your business';
+const services=(biz.services||[]).filter(Boolean);
+const serviceLine=services.length?services.join(', '):niche;
+const prompts=[
+{title:'Local business introduction',text:'Create a friendly post introducing '+name+' in '+area+'. Explain how we help local customers with '+serviceLine+'. Include a clear call to message or call us.'},
+{title:'Frequently asked question',text:'Write a short social post answering one common customer question about '+niche+'. Keep it simple, useful and locally relevant to '+area+'.'},
+{title:'Service spotlight',text:'Create a post highlighting '+serviceLine+'. Explain the benefit to a customer, avoid exaggerated promises and invite them to enquire for details.'},
+{title:'Helpful tip',text:'Share 3 practical tips customers in '+area+' should know before choosing '+niche+'. Make it educational, concise and easy to save.'},
+{title:'Behind the scenes',text:'Draft a behind-the-scenes post showing how '+name+' works, prepares or serves customers. Keep the tone genuine and trustworthy.'},
+{title:'Customer checklist',text:'Create a simple checklist for someone in '+area+' comparing options for '+niche+'. Add a soft invitation to contact '+name+' with questions.'},
+{title:'Offer announcement template',text:'Draft a transparent promotional post for '+name+' about '+serviceLine+'. Leave price, dates and terms as editable placeholders; do not invent discounts.'},
+{title:'Enquiry call-to-action',text:'Write a short post inviting local customers who need '+niche+' to send their requirement to '+name+'. Use a friendly CTA and include placeholders for verified contact details.'}
 ];
-$('ideas').innerHTML=list.map((s,i)=>
-'<div class="row"><b>Post idea '+(i+1)+'</b><p>'+esc(s)+'</p><button class="btn alt" data-copy="'+encodeURIComponent(s)+'">Copy</button></div>'
+$('ideas').innerHTML=prompts.map((p,i)=>
+'<div class="row"><b>'+esc(i+1)+'. '+esc(p.title)+'</b><p>'+esc(p.text)+'</p><button class="btn alt" data-copy="'+encodeURIComponent(p.text)+'">Copy prompt</button></div>'
 ).join('');
 $('ideas').querySelectorAll('[data-copy]').forEach(b=>
 b.onclick=()=>navigator.clipboard.writeText(decodeURIComponent(b.dataset.copy))
