@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type","Access-Control-Allow-Methods":"POST, OPTIONS"};
-const json=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{...cors,"Content-Type":"application/json"}});
+const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...cors,"Content-Type":"application/json"}});
 Deno.serve(async(req)=>{
  if(req.method==="OPTIONS")return new Response("ok",{headers:cors});
  if(req.method!=="POST")return json({error:"POST required"},405);
@@ -27,7 +27,7 @@ Deno.serve(async(req)=>{
  const response=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},body:JSON.stringify({model,instructions,input:prompt+"\nBusiness data (JSON): "+JSON.stringify(input),max_output_tokens:1200})});
  if(!response.ok)return json({status:"provider_error",provider_status:response.status,error:"AI provider request failed. Check API key, model access, billing and quota."},502);
  const data=await response.json();
- const output=(data.output||[]).flatMap(o=>o.content||[]).filter(c=>c.type==="output_text").map(c=>c.text||"").join("\n").trim();
+ const output=(Array.isArray(data.output)?data.output:[]).flatMap((o:any)=>Array.isArray(o.content)?o.content:[]).filter((c:any)=>c.type==="output_text").map((c:any)=>c.text||"").join("\n").trim();
  if(!output)return json({status:"empty_response",error:"AI provider returned no text output."},502);
  return json({status:"generated",type,model,content:output});
 });
