@@ -69,7 +69,10 @@ export function processLead(input = {}, existingLeads = []) {
       ...cleanedLead,
       score: scoring.score,
       priority: scoring.priority,
+      intentLevel: scoring.intentLevel,
+      scoreBreakdown: scoring.breakdown,
       scoreReasons: scoring.reasons,
+      scoreDisclaimer: scoring.disclaimer,
       status: "New"
     }
   };
