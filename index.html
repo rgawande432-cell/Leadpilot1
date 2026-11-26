@@ -103,7 +103,7 @@ footer{margin-top:45px;border-top:1px solid #e1e7f0;padding:25px 0;color:#7b879a
 <div class="grid">
 <div class="panel">
 <div class="bar"><h3>Customer enquiries</h3><div class="actions"><button class="btn alt" id="shareEnquiryBtn">Copy public enquiry link</button><button class="btn alt" id="refreshBtn">Refresh</button></div></div>
-<div id="leadRows">No enquiries yet.</div>
+<div class="bar" style="flex-wrap:wrap;margin:12px 0"><input id="leadSearch" placeholder="Search name, contact or message" style="flex:1;min-width:180px"><select id="leadStatusFilter" style="max-width:170px"><option value="all">All statuses</option><option>New</option><option>Qualified</option><option>Follow-up</option><option>Contacted</option><option>Won</option><option>Lost</option></select></div><div id="leadRows">No enquiries yet.</div>
 </div>
 <div class="panel">
 <h3>Suggested content ideas</h3>
@@ -272,26 +272,21 @@ $('heroProfile').textContent='Saved';
 ideas();
 
 const q=await db.from('leads')
-.select('id,name,email,phone,message,source,status,score,created_at')
-.eq('business_id',biz.id)
-.order('created_at',{ascending:false})
-.limit(100);
-
-if(q.error){
-$('leadRows').textContent='Could not load enquiries: '+q.error.message;
-return;
-}
-
-const ls=q.data||[];
-const fresh=ls.filter(x=>x.status==='New').length;
-
-$('total').textContent=ls.length;
-$('newTotal').textContent=fresh;
-$('heroCount').textContent=ls.length;
-$('heroNew').textContent=fresh;
-
-$('leadRows').innerHTML=ls.length?ls.map(l=>
+.select('id,name,email,phone,message,source,status,scfunction renderLeadRows(){
+const term=$('leadSearch').value.trim().toLowerCase(),status=$('leadStatusFilter').value;
+const filtered=ls.filter(l=>(status==='all'||l.status===status)&&(!term||[l.name,l.email,l.phone,l.message,l.source].some(v=>String(v||'').toLowerCase().includes(term))));
+$('leadRows').innerHTML=filtered.length?filtered.map(l=>
 '<div class="row"><div class="bar"><b>'+esc(l.name)+'</b><span class="pill">'+esc(l.status)+'</span></div><p>'+esc(l.message)+'</p><p class="small">'+esc(l.phone||l.email||'No contact')+' · '+esc(l.source||'Enquiry')+' · Lead score: '+Number(l.score||0)+'/100</p><select data-id="'+l.id+'"><option '+(l.status==='New'?'selected':'')+'>New</option><option '+(l.status==='Qualified'?'selected':'')+'>Qualified</option><option '+(l.status==='Follow-up'?'selected':'')+'>Follow-up</option><option '+(l.status==='Contacted'?'selected':'')+'>Contacted</option><option '+(l.status==='Won'?'selected':'')+'>Won</option><option '+(l.status==='Lost'?'selected':'')+'>Lost</option></select></div>'
+).join(''):'<p>No enquiries match these filters.</p>';
+$('leadRows').querySelectorAll('select[data-id]').forEach(sel=>sel.onchange=async()=>{
+const r=await db.from('leads').update({status:sel.value,updated_at:new Date().toISOString()}).eq('id',sel.dataset.id);
+if(r.error)alert(r.error.message);else load();
+});
+}
+renderLeadRows();
+$('leadSearch').oninput=renderLeadRows;
+$('leadStatusFilter').onchange=renderLeadRows;
+:'')+'>Lost</option></select></div>'
 ).join(''):'<p>No customer enquiries yet. New customer enquiries linked to this business will appear here.</p>';
 
 $('leadRows').querySelectorAll('select[data-id]').forEach(s=>
