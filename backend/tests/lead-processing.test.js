@@ -19,6 +19,9 @@ test("accepts a valid enquiry and scores it", () => {
   assert.equal(result.stage, "processed");
   assert.ok(result.lead.score >= 0);
   assert.ok(["High", "Medium", "Low"].includes(result.lead.priority));
+  assert.ok(["Strong signals", "Moderate signals", "Limited signals"].includes(result.lead.intentLevel));
+  assert.ok(result.lead.scoreBreakdown);
+  assert.match(result.lead.scoreDisclaimer, /not a verified conversion probability/i);
 });
 
 test("rejects missing business ID", () => {
@@ -81,4 +84,20 @@ test("does not flag lead belonging to another business", () => {
   const result = processLead(validLead, existingLeads);
 
   assert.equal(result.accepted, true);
+});
+
+
+test("detects Hindi purchase and urgency signals", () => {
+  const result = processLead({
+    businessId: "business-hindi",
+    name: "Neha",
+    phone: "9876543210",
+    message: "मुझे आज खरीदने के लिए कीमत बताइए, जल्दी डिलीवरी चाहिए",
+    source: "Public enquiry"
+  });
+  assert.equal(result.accepted, true);
+  assert.ok(result.lead.score >= 70);
+  assert.equal(result.lead.priority, "High");
+  assert.ok(result.lead.scoreReasons.some(reason => reason.includes("Purchase or booking intent")));
+  assert.ok(result.lead.scoreReasons.some(reason => reason.includes("Urgency")));
 });
