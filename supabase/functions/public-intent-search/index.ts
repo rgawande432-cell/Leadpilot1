@@ -38,7 +38,9 @@ Deno.serve(async(req)=>{
    if(!rss.ok)return json({status:"provider_error",provider_status:rss.status,message:"Free Google News RSS fallback failed."},502);
    articles=parseRss(await rss.text());
   }
-  const unique=[...new Map(articles.filter((r:any)=>r.url).map((r:any)=>{try{const u=new URL(r.url);if(!["http:","https:"].includes(u.protocol))return ["",{url:""}];return [u.href,{title:r.title||"",url:u.href,domain:r.domain||u.hostname,date:r.seendate||r.date||""}]}catch{return ["",{url:""}]})).values()].filter(r=>r.url);
+  const uniqueMap=new Map<string,{title:string,url:string,domain:string,date:string}>();
+  for(const item of articles){try{const u=new URL(item.url);if(!["http:","https:"].includes(u.protocol))continue;uniqueMap.set(u.href,{title:item.title||"",url:u.href,domain:item.domain||u.hostname,date:item.seendate||item.date||"");}catch{}}
+  const unique=[...uniqueMap.values()];
   results=unique.slice(0,25).map(r=>({query,title:r.title,url:r.url,snippet:"",source_domain:r.domain,date:r.date}));
  }catch{return json({status:"provider_error",message:"Free search provider and RSS fallback connection failed."},502);}
  return json({status:"candidates_found",provider,business:{name:business.name,area,niche,services},queries:[query],results,count:results.length,attribution:"Data: GDELT Project (https://www.gdeltproject.org/) and/or Google News RSS; links to original publishers.",warning:"News results are weak signals, not confirmed buyer intent. Review the article, source and relevance before saving. No contacts are scraped and no CRM leads are automatically created."});
