@@ -99,7 +99,7 @@ Deno.serve(async (req: Request) => {
     const { score, priority } = scoring;
     const { data: lead, error: insertError } = await db.from("leads").insert({
       business_id: businessId, name, phone: phone || null, email: email || null,
-      message, source, score, status: "New", consent_at: new Date().toISOString(), consent_text: consentText,
+      message, source, score, intent_level: scoring.intentLevel, score_breakdown: scoring.breakdown, score_reasons: scoring.reasons, score_disclaimer: scoring.disclaimer, status: "New", consent_at: new Date().toISOString(), consent_text: consentText,
     }).select("id,business_id,name,email,phone,message,source,status,score,created_at").single();
 
     if (insertError?.code === "23505") return respond(409, { success: false, duplicate: true, error: "An enquiry from this contact already exists" });
