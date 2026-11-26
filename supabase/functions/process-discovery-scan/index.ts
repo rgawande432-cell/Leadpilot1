@@ -1,0 +1,68 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type","Access-Control-Allow-Methods":"POST, OPTIONS"};
+const json=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{...cors,"Content-Type":"application/json"}});
+const dedupe=(s:string)=>s.toLowerCase().replace(/\s+/g," ").slice(0,500);
+Deno.serve(async(req)=>{
+ if(req.method==="OPTIONS")return new Response("ok",{headers:cors});
+ if(req.method!=="POST")return json({error:"POST required"},405);
+ const url=Deno.env.get("SUPABASE_URL"),service=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"),anon=Deno.env.get("SUPABASE_ANON_KEY");
+ if(!url||!service||!anon)return json({error:"Server configuration missing"},500);
+ const auth=req.headers.get("Authorization")||"";
+ const userClient=createClient(url,anon,{global:{headers:{Authorization:auth}}});
+ const {data:{user},error:authErr}=await userClient.auth.getUser();
+ if(authErr||!user)return json({error:"Sign-in required"},401);
+ let body;try{body=await req.json()}catch{return json({error:"Invalid JSON"},400)}
+ const businessId=body.business_id,jobId=body.job_id;
+ if(!businessId||!jobId)return json({error:"business_id and job_id required"},400);
+ const admin=createClient(url,service);
+ const {data:business,error:bErr}=await admin.from("businesses").select("id,name,owner_user_id,business_type,niche,description,location,services,audience").eq("id",businessId).single();
+ if(bErr||business.owner_user_id!==user.id)return json({error:"Business access denied"},403);
+ const {data:job,error:jErr}=await admin.from("ai_discovery_jobs").select("*").eq("id",jobId).eq("business_id",businessId).single();
+ if(jErr||!job)return json({error:"Scan job not found"},404);
+ const {data:cfg}=await admin.from("ai_discovery_configs").select("*").eq("business_id",businessId).single();
+ if(!cfg||cfg.status!=="active")return json({error:"AI discovery is paused or not configured"},409);
+ const now=new Date().toISOString();
+ await admin.from("ai_discovery_jobs").update({status:"running",started_at:now,attempts:(job.attempts||0)+1}).eq("id",jobId);
+ const {data:run,error:runErr}=await admin.from("ai_discovery_runs").insert({business_id:businessId,config_id:cfg.id,status:"running",started_at:now,source_name:"Connected source scan"}).select().single();
+ if(runErr){await admin.from("ai_discovery_jobs").update({status:"failed",error_message:runErr.message,completed_at:now}).eq("id",jobId);return json({error:runErr.message},500);}
+ const [{count:leadCount},{count:signalCount},{data:enabledSources}]=await Promise.all([
+ admin.from("leads").select("*",{count:"exact",head:true}).eq("business_id",businessId),
+ admin.from("ai_discovery_signals").select("*",{count:"exact",head:true}).eq("business_id",businessId).eq("verification_status","verified"),
+ admin.from("ai_discovery_sources").select("source_key,display_name,source_type,enabled,requires_credentials,terms_reviewed").eq("enabled",true)
+ ]);
+ const available=(enabledSources||[]).filter(s=>s.source_type==="business_owned"||s.source_type==="manual_review");
+ const apiKey=Deno.env.get("BRAVE_SEARCH_API_KEY");
+ let candidates=0,externalStatus="disconnected",externalError="",searchQueries:string[]=[];
+ if(apiKey){
+  const niche=business.niche||business.business_type||business.name,area=cfg.area||business.location||"India",services=(business.services||[]).slice(0,4).join(" ")||niche;
+  searchQueries=[`"${niche}" looking for ${area}`,`need ${services} near ${area}`,`"${niche}" price quote ${area}`,`recommend ${niche} ${area}`,`"${niche}" buyer requirement ${area}`];
+  const results=[];
+  try{
+   for(const q of searchQueries){
+    const endpoint=new URL("https://api.search.brave.com/res/v1/web/search");endpoint.searchParams.set("q",q);endpoint.searchParams.set("country","IN");endpoint.searchParams.set("search_lang","en");endpoint.searchParams.set("count","5");endpoint.searchParams.set("freshness","pm");
+    const response=await fetch(endpoint,{headers:{"Accept":"application/json","X-Subscription-Token":apiKey}});
+    if(!response.ok)throw new Error("Brave search HTTP "+response.status);
+    const data=await response.json();for(const item of (data.web?.results||[])){try{const parsed=new URL(item.url);if(!["http:","https:"].includes(parsed.protocol))continue;results.push({query:q,title:item.title||"",url:parsed.href,snippet:item.description||""});}catch{continue;}}
+   }
+   const unique=[...new Map(results.map(r=>[r.url,r])).values()];
+   for(const r of unique.slice(0,25)){
+    const evidence=(r.title+" — "+r.snippet).slice(0,2000),txt=evidence.toLowerCase();
+    const intent=/(looking for|need a|need an|want to buy|buying|purchase|hire|quote|quotation|price for|available for|request for|seeking)/i.test(txt)?"explicit":/(which|where|recommend|suggest|anyone know|how much|best|options|can anyone|who provides)/i.test(txt)?"question":"research";
+    if(intent==="research")continue;
+    const terms=[business.niche,business.business_type,...(business.services||[])].filter(Boolean).flatMap(t=>String(t).toLowerCase().split(/[^a-z0-9]+/)).filter(t=>t.length>=3);
+    const matches=[...new Set(terms)].filter(t=>txt.includes(t));
+    if(matches.length===0)continue;
+    const base=intent==="explicit"?55:intent==="question"?40:20,score=Math.min(100,base+Math.min(24,matches.length*8));
+    const payload={business_id:businessId,run_id:run.id,source_name:"Brave Search",source_url:r.url,evidence,intent_type:intent,signal_date:new Date().toISOString().slice(0,10),score,verification_status:"pending",dedupe_key:dedupe(r.url+"|"+r.snippet)};
+    const saved=await admin.from("ai_discovery_signals").upsert(payload,{onConflict:"business_id,dedupe_key"}).select("id").single();
+    if(!saved.error)candidates++;
+   }
+   externalStatus="connected"; 
+  }catch(e){externalStatus="error";externalError=String(e?.message||e);}
+ }
+ const completed=new Date().toISOString();
+ const report={existing_real_enquiries:leadCount||0,verified_intent_signals:signalCount||0,pending_search_candidates:candidates,available_source_types:available.map(s=>s.display_name),external_search_status:externalStatus,external_search_error:externalError,queries:searchQueries,note:apiKey?"External public search candidates saved as pending review only. No leads were auto-created or contact data scraped.":"External search is disconnected (API key missing). This run checked connected internal sources only; no fake leads created."};
+ await admin.from("ai_discovery_runs").update({status:"completed",completed_at:completed,signals_found:candidates,leads_created:0,source_name:apiKey?"Brave public search + internal sources":"Available internal sources",error_summary:externalError||report.note}).eq("id",run.id);
+ await admin.from("ai_discovery_jobs").update({status:"completed",completed_at:completed,metadata:{...(job.metadata||{}),report}}).eq("id",jobId);
+ return json({success:true,run_id:run.id,job_id:jobId,report});
+});
