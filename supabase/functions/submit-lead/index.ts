@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { qualificationFromScore } from "./qualification.js";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -38,12 +39,6 @@ function scoreLead(message: string, phone: string, email: string) {
   const priority = score >= 70 ? "High" : score >= 40 ? "Medium" : "Low";
   const intentLevel = score >= 70 ? "Strong signals" : score >= 40 ? "Moderate signals" : "Limited signals";
   return { score, priority, intentLevel, breakdown, reasons, disclaimer: "Heuristic lead priority score based on submitted details; not a verified conversion probability." };
-}
-
-function qualificationFromScore(score: number) {
-  if (score >= 70) return { status: "High", delayHours: 24, note: "High intent signals (heuristic only; not verified genuine). Owner review and follow-up recommended within 24 hours." };
-  if (score >= 40) return { status: "Medium", delayHours: 48, note: "Moderate intent signals (heuristic only; not verified genuine). Owner review and follow-up recommended within 48 hours." };
-  return { status: "Low", delayHours: 72, note: "Limited intent signals (heuristic only; not verified genuine). Review details before deciding whether to follow up." };
 }
 
 Deno.serve(async (req: Request) => {
