@@ -42,17 +42,18 @@ Deno.serve(async(req)=>{
      const endpoint=new URL("https://api.gdeltproject.org/api/v2/doc/doc");
      endpoint.searchParams.set("query",query);endpoint.searchParams.set("mode","ArtList");endpoint.searchParams.set("format","json");endpoint.searchParams.set("maxrecords","20");endpoint.searchParams.set("timespan","7d");endpoint.searchParams.set("sort","DateDesc");
      const response=await fetch(endpoint,{headers:{"Accept":"application/json"}});
-     if(response.ok){const data=await response.json();if(Array.isArray(data.articles)){articles=data.articles.map((x:any)=>({title:x.title||"",url:x.url||"",domain:x.domain||"",date:x.seendate||""}));provider="GDELT Project";}}
-     else if(response.status===429||response.status>=500){
+     let fallbackReason="";
+     if(response.ok){
+      const raw=await response.text();
+      try{const data=JSON.parse(raw);if(Array.isArray(data.articles)){articles=data.articles.map((x:any)=>({title:x.title||"",url:x.url||"",domain:x.domain||"",date:x.seendate||""}));provider="GDELT Project";}else fallbackReason="GDELT returned HTTP 200 without article data";}
+      catch{fallbackReason="GDELT returned HTTP 200 with non-JSON content";}
+     }else if(response.status===429||response.status>=500)fallbackReason="GDELT HTTP "+response.status;
+     else throw new Error("GDELT HTTP "+response.status);
+     if(fallbackReason||!articles.length){
       const rssUrl=new URL("https://news.google.com/rss/search");rssUrl.searchParams.set("q",query+" when:7d");rssUrl.searchParams.set("hl","en-IN");rssUrl.searchParams.set("gl","IN");rssUrl.searchParams.set("ceid","IN:en");
       const rss=await fetch(rssUrl,{headers:{"Accept":"application/rss+xml, application/xml, text/xml"}});
-      if(!rss.ok)throw new Error("GDELT "+response.status+"; Google News RSS "+rss.status);
+      if(!rss.ok)throw new Error((fallbackReason||"GDELT returned no articles")+"; Google News RSS "+rss.status);
       articles=parseRss(await rss.text());provider="Google News RSS fallback";
-     }else throw new Error("GDELT HTTP "+response.status);
-     if(!articles.length&&provider!=="Google News RSS fallback"){
-      const rssUrl=new URL("https://news.google.com/rss/search");rssUrl.searchParams.set("q",query+" when:7d");rssUrl.searchParams.set("hl","en-IN");rssUrl.searchParams.set("gl","IN");rssUrl.searchParams.set("ceid","IN:en");
-      const rss=await fetch(rssUrl,{headers:{"Accept":"application/rss+xml, application/xml, text/xml"}});
-      if(rss.ok){articles=parseRss(await rss.text());provider="Google News RSS fallback";}
      }
      for(const result of [...new Map(articles.filter((x:any)=>x.url).map((x:any)=>[x.url,x])).values()].slice(0,20)){
       const evidence=(result.title+" — "+result.domain+" — "+result.date).slice(0,1800),txt=clean(evidence);
