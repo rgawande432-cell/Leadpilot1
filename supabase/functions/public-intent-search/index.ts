@@ -29,10 +29,14 @@ Deno.serve(async(req)=>{
   endpoint.searchParams.set("query",query);endpoint.searchParams.set("mode","ArtList");endpoint.searchParams.set("format","json");endpoint.searchParams.set("maxrecords","25");endpoint.searchParams.set("timespan","7d");endpoint.searchParams.set("sort","DateDesc");
   const response=await fetch(endpoint,{headers:{"Accept":"application/json"}});
   let articles:any[]=[];
-  if(response.ok){const data=await response.json();if(Array.isArray(data.articles))articles=data.articles;else provider="Google News RSS fallback";}
-  else if(response.status===429||response.status>=500)provider="Google News RSS fallback";
+  let fallbackReason="";
+  if(response.ok){
+   const raw=await response.text();
+   try{const data=JSON.parse(raw);if(Array.isArray(data.articles))articles=data.articles;else fallbackReason="GDELT returned HTTP 200 without article data";}
+   catch{fallbackReason="GDELT returned HTTP 200 with non-JSON content";}
+  }else if(response.status===429||response.status>=500)fallbackReason="GDELT HTTP "+response.status;
   else return json({status:"provider_error",provider_status:response.status,message:"GDELT search failed."},502);
-  if(provider==="Google News RSS fallback"||!articles.length){
+  if(fallbackReason||!articles.length){
    const rssUrl=new URL("https://news.google.com/rss/search");rssUrl.searchParams.set("q",query+" when:7d");rssUrl.searchParams.set("hl","en-IN");rssUrl.searchParams.set("gl","IN");rssUrl.searchParams.set("ceid","IN:en");
    const rss=await fetch(rssUrl,{headers:{"Accept":"application/rss+xml, application/xml, text/xml"}});
    if(!rss.ok)return json({status:"provider_error",provider_status:rss.status,message:"Free Google News RSS fallback failed."},502);
