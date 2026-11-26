@@ -7,12 +7,14 @@ on:
       - "backend/tests/**"
       - "backend/package.json"
       - "supabase/functions/**"
+      - "supabase/functions/**"
       - ".github/workflows/backend-lead-tests.yml"
   pull_request:
     paths:
       - "backend/src/**"
       - "backend/tests/**"
       - "backend/package.json"
+      - "supabase/functions/**"
       - ".github/workflows/backend-lead-tests.yml"
 
 jobs:
