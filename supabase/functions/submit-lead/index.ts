@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { qualificationFromScore } from "./qualification.js";
-import { scoreLead } from "../../../backend/src/lead-scoring.js";
+import { scoreLead } from "../_shared/lead-scoring.js";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
