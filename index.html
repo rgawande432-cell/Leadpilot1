@@ -1,134 +1,375 @@
 
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="LeadPilot AI helps local businesses create organic content and manage customer enquiries.">
-  <title>LeadPilot AI | Local Business Growth</title>
-  <style>
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #f5f7fc;
-      color: #17233e;
-    }
-    .wrap { max-width: 1100px; margin: auto; padding: 24px; }
-    nav { display: flex; justify-content: space-between; align-items: center; }
-    .logo { font-size: 23px; font-weight: 800; color: #2457d6; }
-    .btn {
-      display: inline-block;
-      background: #2457d6;
-      color: white;
-      padding: 13px 20px;
-      border-radius: 10px;
-      text-decoration: none;
-      font-weight: bold;
-    }
-    .hero {
-      padding: 75px 0;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 40px;
-      align-items: center;
-    }
-    .tag {
-      color: #2457d6;
-      font-weight: bold;
-      text-transform: uppercase;
-      font-size: 12px;
-      letter-spacing: 2px;
-    }
-    h1 { font-size: 52px; line-height: 1.08; margin: 18px 0; }
-    h2 { font-size: 32px; }
-    p { color: #65738b; line-height: 1.7; }
-    .panel, .card {
-      background: white;
-      padding: 24px;
-      border: 1px solid #e3e9f3;
-      border-radius: 18px;
-    }
-    .stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
-    .stat { padding: 15px; background: #f4f7fc; border-radius: 12px; }
-    .stat small { color: #65738b; }
-    .stat strong { display: block; font-size: 26px; margin-top: 8px; }
-    .sample { font-size: 11px; color: #8995a8; }
-    .cards { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin: 25px 0 55px; }
-    .card h3 { margin-top: 0; }
-    footer { border-top: 1px solid #e3e9f3; padding: 25px 0; color: #65738b; font-size: 13px; }
-    @media(max-width:750px) {
-      .hero { grid-template-columns: 1fr; padding: 40px 0; }
-      .cards { grid-template-columns: 1fr; }
-      h1 { font-size: 42px; }
-    }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="LeadPilot AI helps local businesses manage customer enquiries and grow organically.">
+<title>LeadPilot AI | Local Business Growth</title>
+<style>
+:root{font-family:Arial,sans-serif;color:#17233e;background:#f5f7fc}
+*{box-sizing:border-box}
+body{margin:0}
+.wrap{max-width:1080px;margin:auto;padding:22px}
+nav,.bar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.logo{font-size:24px;font-weight:800;color:#2457d6}
+.btn{border:0;border-radius:10px;padding:12px 17px;background:#2457d6;color:white;font-weight:bold;cursor:pointer;text-decoration:none;display:inline-block}
+.alt{background:#eaf0ff;color:#2457d6}
+.hero{padding:65px 0;display:grid;grid-template-columns:1.1fr .9fr;gap:25px;align-items:center}
+h1{font-size:clamp(38px,6vw,58px);line-height:1.06;margin:12px 0}
+h2{margin:10px 0}
+p{color:#65738b;line-height:1.6}
+.tag{color:#2457d6;font-weight:bold;letter-spacing:1px;font-size:12px;text-transform:uppercase}
+.card,.panel{background:white;border:1px solid #e2e8f2;border-radius:16px;padding:22px}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:22px 0}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{background:#f3f6fc;padding:13px;border-radius:10px}
+.stat strong{display:block;font-size:24px;margin-top:6px}
+.hidden{display:none!important}
+.modal{position:fixed;inset:0;background:#101a2dcc;display:grid;place-items:center;padding:15px;z-index:4}
+.box{background:white;border-radius:16px;padding:22px;width:min(620px,100%);max-height:92vh;overflow:auto}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field{margin:10px 0}
+.field label{display:block;font-size:13px;font-weight:bold;margin-bottom:5px}
+input,textarea,select{width:100%;padding:12px;border:1px solid #d5deeb;border-radius:9px;font:inherit}
+textarea{min-height:80px}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin:15px 0}
+.row{border-bottom:1px solid #e6ebf3;padding:13px 0}
+.pill{font-size:12px;background:#edf2ff;color:#2457d6;padding:5px 9px;border-radius:18px}
+.small{color:#7b879a;font-size:12px}
+footer{margin-top:45px;border-top:1px solid #e1e7f0;padding:25px 0;color:#7b879a;font-size:13px}
+@media(max-width:720px){
+.hero{grid-template-columns:1fr;padding:40px 0}
+.cards,.grid{grid-template-columns:1fr}
+.wrap{padding:15px}
+}
+</style>
 </head>
 <body>
-  <div class="wrap">
-    <nav>
-      <div class="logo">✦ LeadPilot AI</div>
-      <a class="btn" href="#features">Explore</a>
-    </nav>
+<main class="wrap">
+<nav>
+<div class="logo">✦ LeadPilot AI</div>
+<div class="actions">
+<button class="btn alt" id="loginBtn">Login</button>
+<button class="btn" id="startBtn">Get Started</button>
+</div>
+</nav>
 
-    <section class="hero">
-      <div>
-        <span class="tag">Organic growth for local businesses</span>
-        <h1>More local enquiries.<br><span style="color:#2457d6">Less manual work.</span></h1>
-        <p>
-          LeadPilot AI is being built to help local shops understand their
-          customers, create useful content, and manage incoming enquiries
-          from one simple platform.
-        </p>
-        <a class="btn" href="#features">Discover LeadPilot →</a>
-        <p>✓ Website optional &nbsp; ✓ Local business focused &nbsp; ✓ Simple workflow</p>
-      </div>
+<section class="hero">
+<div>
+<span class="tag">Organic growth for local businesses</span>
+<h1>Turn local interest into customer enquiries.</h1>
+<p>Manage your business profile, organise incoming enquiries and get practical content ideas. Your own website is optional.</p>
+<div class="actions">
+<button class="btn" id="heroStart">Create business profile</button>
+<a class="btn alt" href="#features">Explore features</a>
+</div>
+</div>
+<div class="panel">
+<span class="tag">Your account overview</span>
+<h2>One simple workspace</h2>
+<div class="stats">
+<div class="stat">Enquiries<strong id="heroCount">—</strong></div>
+<div class="stat">New<strong id="heroNew">—</strong></div>
+<div class="stat">Profile<strong id="heroProfile">—</strong></div>
+</div>
+<p class="small">Only your actual saved account data is displayed. No demo leads.</p>
+</div>
+</section>
 
-      <div class="panel">
-        <h3>Dashboard Preview <span style="color:#16a36a;font-size:12px">● SAMPLE</span></h3>
-        <div class="stats">
-          <div class="stat"><small>Enquiries</small><strong>24</strong></div>
-          <div class="stat"><small>Follow-ups</small><strong>8</strong></div>
-          <div class="stat"><small>New today</small><strong>5</strong></div>
-        </div>
-        <div style="margin-top:20px;padding:20px;background:#edf3ff;border-radius:12px">
-          <h3 style="color:#2457d6">Enquiry management</h3>
-          <p>Organise customer messages, filter spam, detect duplicates and prioritise follow-up.</p>
-        </div>
-        <p class="sample">Illustrative sample only. These are not real leads or live statistics.</p>
-      </div>
-    </section>
+<section id="features">
+<span class="tag">Features</span>
+<h2>Built for local business owners</h2>
+<div class="cards">
+<article class="card"><h3>Business profile</h3><p>Save your shop, service, location and contact details. Website optional.</p></article>
+<article class="card"><h3>Enquiry CRM</h3><p>See customer enquiries and update follow-up status from one place.</p></article>
+<article class="card"><h3>Content ideas</h3><p>Get post and FAQ prompts based on your business category and area.</p></article>
+</div>
+</section>
 
-    <section id="features">
-      <span class="tag">How it works</span>
-      <h2>Made for everyday shop owners</h2>
-      <div class="cards">
-        <div class="card">
-          <h3>01 · Business profile</h3>
-          <p>Add your shop name, category, services, location and contact details. A website is optional.</p>
-        </div>
-        <div class="card">
-          <h3>02 · Content ideas</h3>
-          <p>Discover useful customer questions and organic post ideas for your business niche.</p>
-        </div>
-        <div class="card">
-          <h3>03 · Manage enquiries</h3>
-          <p>Keep customer enquiries organised and focus on the ones that need follow-up.</p>
-        </div>
-      </div>
+<section id="dashboard" class="hidden">
+<div class="bar">
+<div><span class="tag">Workspace</span><h2 id="welcome">Dashboard</h2></div>
+<div class="actions">
+<button class="btn alt" id="editBtn">Edit profile</button>
+<button class="btn" id="logoutBtn">Logout</button>
+</div>
+</div>
+<div class="cards">
+<div class="card">Total enquiries<h2 id="total">0</h2></div>
+<div class="card">New enquiries<h2 id="newTotal">0</h2></div>
+<div class="card">Business profile<h2 id="saved">Saved</h2></div>
+</div>
+<div class="grid">
+<div class="panel">
+<div class="bar"><h3>Customer enquiries</h3><button class="btn alt" id="refreshBtn">Refresh</button></div>
+<div id="leadRows">No enquiries yet.</div>
+</div>
+<div class="panel">
+<h3>Suggested content ideas</h3>
+<p class="small">Prompts are suggestions, not verified customer demand.</p>
+<div id="ideas"></div>
+</div>
+</div>
+</section>
 
-      <div class="panel" style="background:#2457d6;color:white">
-        <h2>Grow your business, one enquiry at a time.</h2>
-        <p style="color:#e1eaff">
-          LeadPilot AI is in active development. The live enquiry system
-          and dashboard are being connected for early testing.
-        </p>
-      </div>
-    </section>
+<footer>© 2026 LeadPilot AI · Lead scores and content suggestions are not guarantees of sales.</footer>
+</main>
 
-    <footer>
-      © 2026 LeadPilot AI · Early product preview · No live lead data displayed
-    </footer>
-  </div>
+<div class="modal hidden" id="authModal">
+<div class="box">
+<div class="bar"><h2 id="authHeading">Create account</h2><button class="btn alt" id="closeAuth">Close</button></div>
+<p>Use your email and password to access your workspace.</p>
+<div class="field"><label>Email</label><input id="email" type="email" autocomplete="email"></div>
+<div class="field"><label>Password</label><input id="password" type="password" minlength="6" autocomplete="current-password"></div>
+<div class="actions">
+<button class="btn" id="authGo">Create account</button>
+<button class="btn alt" id="authSwitch">I already have an account</button>
+</div>
+<p id="authMsg" role="status"></p>
+</div>
+</div>
+
+<div class="modal hidden" id="businessModal">
+<div class="box">
+<div class="bar"><h2>Business profile</h2><button class="btn alt" id="closeBusiness">Close</button></div>
+<p>Only business name is required. Website is optional.</p>
+<form id="businessForm">
+<div class="grid">
+<div class="field"><label>Business name *</label><input name="name" required maxlength="120"></div>
+<div class="field"><label>Category</label><input name="business_type" placeholder="Shop, salon, clinic…"></div>
+<div class="field"><label>Niche / products</label><input name="niche"></div>
+<div class="field"><label>Location / area</label><input name="location"></div>
+<div class="field"><label>Phone</label><input name="phone" type="tel"></div>
+<div class="field"><label>Business email</label><input name="email" type="email"></div>
+<div class="field"><label>Website (optional)</label><input name="website" type="url" placeholder="https://"></div>
+<div class="field"><label>Target audience</label><input name="audience"></div>
+</div>
+<div class="field"><label>Products / services (comma separated)</label><input name="services"></div>
+<div class="field"><label>Business description</label><textarea name="description"></textarea></div>
+<button class="btn" id="saveBtn">Save business profile</button>
+<p id="businessMsg" role="status"></p>
+</form>
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(()=>{
+const db=window.supabase.createClient(
+'https://hbuttmjdlzqwxlqdkgca.supabase.co',
+'sb_publishable_rHbGO86cBuo3tlGmtKl9DA_fRDlJl-N'
+);
+const $=id=>document.getElementById(id);
+let user=null,biz=null,mode='signup';
+
+const show=id=>$(id).classList.remove('hidden');
+const hide=id=>$(id).classList.add('hidden');
+const say=(id,s)=>$(id).textContent=s;
+const esc=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function auth(m){
+mode=m;
+say('authHeading',m==='signup'?'Create account':'Login');
+$('authGo').textContent=m==='signup'?'Create account':'Login';
+$('authSwitch').textContent=m==='signup'?'I already have an account':'Create a new account';
+say('authMsg','');
+show('authModal');
+}
+
+function fill(){
+const f=$('businessForm');
+['name','business_type','niche','location','phone','email','website','audience','description'].forEach(k=>f.elements[k].value=biz?.[k]||'');
+f.elements.services.value=(biz?.services||[]).join(', ');
+}
+
+function ideas(){
+const n=biz.niche||biz.business_type||'your products or services';
+const a=biz.location||'your area';
+const list=[
+'Introduce '+biz.name+' and explain how you help customers in '+a+'.',
+'Answer one common question about '+n+'.',
+'Share a simple tip customers should know before choosing '+n+'.',
+'Explain your service process, timings and contact options.'
+];
+$('ideas').innerHTML=list.map((s,i)=>
+'<div class="row"><b>Post idea '+(i+1)+'</b><p>'+esc(s)+'</p><button class="btn alt" data-copy="'+encodeURIComponent(s)+'">Copy</button></div>'
+).join('');
+$('ideas').querySelectorAll('[data-copy]').forEach(b=>
+b.onclick=()=>navigator.clipboard.writeText(decodeURIComponent(b.dataset.copy))
+.then(()=>b.textContent='Copied')
+.catch(()=>alert(decodeURIComponent(b.dataset.copy)))
+);
+}
+
+async function load(){
+const p=await db.from('businesses').select('*')
+.eq('owner_user_id',user.id)
+.order('created_at',{ascending:false})
+.limit(1).maybeSingle();
+
+if(p.error){
+say('businessMsg','Profile error: '+p.error.message);
+return;
+}
+
+biz=p.data;
+
+if(!biz){
+fill();
+show('businessModal');
+return;
+}
+
+show('dashboard');
+$('welcome').textContent='Welcome, '+biz.name;
+$('heroProfile').textContent='Saved';
+ideas();
+
+const q=await db.from('leads')
+.select('id,name,email,phone,message,source,status,created_at')
+.eq('business_id',biz.id)
+.order('created_at',{ascending:false})
+.limit(100);
+
+if(q.error){
+$('leadRows').textContent='Could not load enquiries: '+q.error.message;
+return;
+}
+
+const ls=q.data||[];
+const fresh=ls.filter(x=>x.status==='New').length;
+
+$('total').textContent=ls.length;
+$('newTotal').textContent=fresh;
+$('heroCount').textContent=ls.length;
+$('heroNew').textContent=fresh;
+
+$('leadRows').innerHTML=ls.length?ls.map(l=>
+'<div class="row"><div class="bar"><b>'+esc(l.name)+'</b><span class="pill">'+esc(l.status)+'</span></div><p>'+esc(l.message)+'</p><p class="small">'+esc(l.phone||l.email||'No contact')+' · '+esc(l.source||'Enquiry')+'</p><select data-id="'+l.id+'"><option '+(l.status==='New'?'selected':'')+'>New</option><option '+(l.status==='Qualified'?'selected':'')+'>Qualified</option><option '+(l.status==='Follow-up'?'selected':'')+'>Follow-up</option><option '+(l.status==='Contacted'?'selected':'')+'>Contacted</option><option '+(l.status==='Won'?'selected':'')+'>Won</option><option '+(l.status==='Lost'?'selected':'')+'>Lost</option></select></div>'
+).join(''):'<p>No customer enquiries yet. New customer enquiries linked to this business will appear here.</p>';
+
+$('leadRows').querySelectorAll('select[data-id]').forEach(s=>
+s.onchange=async()=>{
+const r=await db.from('leads')
+.update({status:s.value,updated_at:new Date().toISOString()})
+.eq('id',s.dataset.id);
+if(r.error)alert(r.error.message);
+else load();
+});
+}
+
+$('startBtn').onclick=$('heroStart').onclick=()=>user?(fill(),show('businessModal')):auth('signup');
+$('loginBtn').onclick=()=>auth('login');
+$('closeAuth').onclick=()=>hide('authModal');
+$('closeBusiness').onclick=()=>hide('businessModal');
+$('authSwitch').onclick=()=>auth(mode==='signup'?'login':'signup');
+
+$('authGo').onclick=async()=>{
+const email=$('email').value.trim();
+const password=$('password').value;
+
+if(!email||password.length<6){
+say('authMsg','Enter a valid email and password (minimum 6 characters).');
+return;
+}
+
+$('authGo').disabled=true;
+say('authMsg','Please wait…');
+
+const r=mode==='signup'
+?await db.auth.signUp({email,password})
+:await db.auth.signInWithPassword({email,password});
+
+$('authGo').disabled=false;
+
+if(r.error){
+say('authMsg',r.error.message);
+return;
+}
+
+if(mode==='signup'&&!r.data.session){
+say('authMsg','Account created. Check your email to confirm, then log in.');
+return;
+}
+
+hide('authModal');
+user=r.data.user;
+await load();
+};
+
+$('businessForm').onsubmit=async e=>{
+e.preventDefault();
+if(!user)return;
+
+const f=new FormData(e.target);
+const v=k=>String(f.get(k)||'').trim();
+
+const data={
+owner_user_id:user.id,
+name:v('name'),
+business_type:v('business_type')||null,
+niche:v('niche')||null,
+description:v('description')||null,
+location:v('location')||null,
+audience:v('audience')||null,
+website:v('website')||null,
+phone:v('phone')||null,
+email:v('email')||null,
+services:v('services').split(',').map(x=>x.trim()).filter(Boolean),
+updated_at:new Date().toISOString()
+};
+
+$('saveBtn').disabled=true;
+say('businessMsg','Saving…');
+
+const r=biz
+?await db.from('businesses').update(data).eq('id',biz.id).eq('owner_user_id',user.id).select().single()
+:await db.from('businesses').insert(data).select().single();
+
+$('saveBtn').disabled=false;
+
+if(r.error){
+say('businessMsg','Could not save: '+r.error.message);
+return;
+}
+
+biz=r.data;
+hide('businessModal');
+await load();
+};
+
+$('editBtn').onclick=()=>{
+fill();
+show('businessModal');
+};
+
+$('refreshBtn').onclick=load;
+
+$('logoutBtn').onclick=async()=>{
+await db.auth.signOut();
+user=null;
+biz=null;
+hide('dashboard');
+$('heroCount').textContent=$('heroNew').textContent=$('heroProfile').textContent='—';
+};
+
+db.auth.getSession().then(async({data})=>{
+if(data.session){
+user=data.session.user;
+await load();
+}
+});
+
+db.auth.onAuthStateChange((_event,session)=>{
+if(session)user=session.user;
+else if(user){
+user=null;
+biz=null;
+hide('dashboard');
+}
+});
+})();
+</script>
 </body>
 </html>
