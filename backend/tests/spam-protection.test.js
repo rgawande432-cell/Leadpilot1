@@ -61,3 +61,24 @@ test("blocks submission without an identifier", () => {
 
   assert.equal(result.allowed, false);
 });
+
+test("rejects honeypot-filled submission", () => {
+  const result = checkSpam({
+    name: "Bot",
+    phone: "9876543210",
+    message: "Interested in your services",
+    website_check: "https://bot.example"
+  });
+  assert.equal(result.isSpam, true);
+  assert.ok(result.reasons.includes("Honeypot field filled"));
+});
+
+test("flags Hindi spam phrases", () => {
+  const result = checkSpam({
+    name: "Spam",
+    phone: "9876543210",
+    message: "जल्दी अमीर बनें और मुफ्त इनाम पाएं"
+  });
+  assert.equal(result.isSpam, true);
+  assert.ok(result.reasons.includes("Suspicious spam content"));
+});
