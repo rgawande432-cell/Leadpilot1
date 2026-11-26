@@ -7,7 +7,6 @@ on:
       - "backend/tests/**"
       - "backend/package.json"
       - "supabase/functions/**"
-      - "supabase/functions/**"
       - ".github/workflows/backend-lead-tests.yml"
   pull_request:
     paths:
