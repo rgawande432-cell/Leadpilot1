@@ -153,7 +153,7 @@ footer{margin-top:45px;border-top:1px solid #e1e7f0;padding:25px 0;color:#7b879a
 <div class="field"><label>Password</label><input id="password" type="password" minlength="6" autocomplete="current-password"></div>
 <div class="actions">
 <button class="btn" id="authGo">Create account</button>
-<button class="btn alt" id="authSwitch">I already have an account</button>
+<button class="btn alt" id="authSwitch">I already have an account</button><button class="btn alt" type="button" id="resendConfirm">Resend confirmation email</button><button class="btn alt" type="button" id="forgotPassword">Forgot password?</button>
 </div>
 <p id="authMsg" role="status"></p>
 </div>
@@ -205,6 +205,9 @@ mode=m;
 say('authHeading',m==='signup'?'Create account':'Login');
 $('authGo').textContent=m==='signup'?'Create account':'Login';
 $('authSwitch').textContent=m==='signup'?'I already have an account':'Create a new account';
+$('resendConfirm').classList.toggle('hidden',m!=='signup');
+$('forgotPassword').classList.toggle('hidden',m==='signup');
+$('password').autocomplete=m==='signup'?'new-password':'current-password';
 say('authMsg','');
 show('authModal');
 }
@@ -314,37 +317,23 @@ $('closeBusiness').onclick=()=>hide('businessModal');
 $('authSwitch').onclick=()=>auth(mode==='signup'?'login':'signup');
 
 $('authGo').onclick=async()=>{
-const email=$('email').value.trim();
+const email=$('email').value.trim().toLowerCase();
 const password=$('password').value;
-
-if(!email||password.length<6){
-say('authMsg','Enter a valid email and password (minimum 6 characters).');
-return;
-}
-
-$('authGo').disabled=true;
-say('authMsg','Please wait…');
-
-const r=mode==='signup'
-?await db.auth.signUp({email,password})
-:await db.auth.signInWithPassword({email,password});
-
-$('authGo').disabled=false;
-
-if(r.error){
-say('authMsg',r.error.message);
-return;
-}
-
-if(mode==='signup'&&!r.data.session){
-say('authMsg','Account created. Check your email to confirm, then log in.');
-return;
-}
-
-hide('authModal');
-user=r.data.user;
-await load();
+if(!email||!$('email').checkValidity()){say('authMsg','Please enter a valid email address.');$('email').focus();return;}
+if(password.length<6){say('authMsg','Password must be at least 6 characters.');$('password').focus();return;}
+$('authGo').disabled=true;$('authGo').textContent=mode==='signup'?'Creating account…':'Logging in…';say('authMsg','Connecting securely…');
+try{
+const redirect=location.origin+location.pathname;
+const result=mode==='signup'?await db.auth.signUp({email,password,options:{emailRedirectTo:redirect}}):await db.auth.signInWithPassword({email,password});
+if(result.error){say('authMsg',result.error.message);return;}
+if(mode==='signup'&&!result.data.session){say('authMsg','Account created. If confirmation is enabled, check Inbox/Spam. If email is delayed, use Resend confirmation below.');return;}
+hide('authModal');user=result.data.user;await load();
+}catch(err){say('authMsg','Connection error. Please check internet and retry. '+(err?.message||''));}
+finally{$('authGo').disabled=false;$('authGo').textContent=mode==='signup'?'Create account':'Login';}
 };
+$('resendConfirm').onclick=async()=>{const email=$('email').value.trim().toLowerCase();if(!email||!$('email').checkValidity()){say('authMsg','Enter the account email first.');$('email').focus();return;}const b=$('resendConfirm');b.disabled=true;say('authMsg','Sending confirmation email…');try{const x=await db.auth.resend({type:'signup',email,options:{emailRedirectTo:location.origin+location.pathname}});say('authMsg',x.error?'Could not resend: '+x.error.message:'Confirmation request sent. Check Inbox and Spam.');}catch(e){say('authMsg','Email resend error: '+(e?.message||'Please try again.'));}finally{b.disabled=false;}};
+$('forgotPassword').onclick=async()=>{const email=$('email').value.trim().toLowerCase();if(!email||!$('email').checkValidity()){say('authMsg','Enter your account email first.');$('email').focus();return;}const b=$('forgotPassword');b.disabled=true;say('authMsg','Sending password reset email…');try{const x=await db.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});say('authMsg',x.error?'Reset failed: '+x.error.message:'If the account exists, a password reset email has been requested. Check Inbox and Spam.');}catch(e){say('authMsg','Reset request error: '+(e?.message||'Please retry.'));}finally{b.disabled=false;}};
+db.auth.onAuthStateChange(async(event,session)=>{if(event==='PASSWORD_RECOVERY'&&session){const next=prompt('Enter your new password (minimum 6 characters):');if(next&&next.length>=6){const result=await db.auth.updateUser({password:next});alert(result.error?'Password update failed: '+result.error.message:'Password updated. Please log in with the new password.');}else if(next!==null){alert('Password must be at least 6 characters.');}}});
 
 $('businessForm').onsubmit=async e=>{
 e.preventDefault();
