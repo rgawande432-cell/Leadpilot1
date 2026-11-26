@@ -32,8 +32,10 @@ Deno.serve(async(req)=>{
  ]);
  const available=(enabledSources||[]).filter(s=>s.source_type==="business_owned"||s.source_type==="manual_review");
  const apiKey=Deno.env.get("BRAVE_SEARCH_API_KEY");
- let candidates=0,externalStatus="disconnected",externalError="",searchQueries:string[]=[];
- if(apiKey){
+ const {data:braveSource}=await admin.from("ai_discovery_sources").select("enabled,terms_reviewed").eq("source_key","brave_public_web_search").maybeSingle();
+ const braveApproved=!!braveSource?.enabled&&!!braveSource?.terms_reviewed;
+ let candidates=0,externalStatus=apiKey?(braveApproved?"connected":"source_disabled"):"disconnected",externalError=apiKey&&!braveApproved?"Brave source is disabled or terms review is incomplete.":"",searchQueries:string[]=[];
+ if(apiKey&&braveApproved){
   const niche=business.niche||business.business_type||business.name,area=cfg.area||business.location||"India",services=(business.services||[]).slice(0,4).join(" ")||niche;
   searchQueries=[`"${niche}" looking for ${area}`,`need ${services} near ${area}`,`"${niche}" price quote ${area}`,`recommend ${niche} ${area}`,`"${niche}" buyer requirement ${area}`];
   const results=[];

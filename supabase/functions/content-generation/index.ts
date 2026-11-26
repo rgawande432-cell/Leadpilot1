@@ -1,0 +1,33 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type","Access-Control-Allow-Methods":"POST, OPTIONS"};
+const json=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{...cors,"Content-Type":"application/json"}});
+Deno.serve(async(req)=>{
+ if(req.method==="OPTIONS")return new Response("ok",{headers:cors});
+ if(req.method!=="POST")return json({error:"POST required"},405);
+ const url=Deno.env.get("SUPABASE_URL"),anon=Deno.env.get("SUPABASE_ANON_KEY");
+ if(!url||!anon)return json({error:"Supabase configuration missing"},500);
+ const auth=req.headers.get("Authorization")||"";
+ const userClient=createClient(url,anon,{global:{headers:{Authorization:auth}}});
+ const {data:{user},error:authError}=await userClient.auth.getUser();
+ if(authError||!user)return json({error:"Sign-in required"},401);
+ let body;try{body=await req.json()}catch{return json({error:"Invalid JSON"},400)}
+ const businessId=String(body.business_id||"");
+ if(!businessId)return json({error:"business_id required"},400);
+ const {data:business,error:bErr}=await userClient.from("businesses").select("id,name,owner_user_id,business_type,niche,description,location,services,phone,website").eq("id",businessId).single();
+ if(bErr||business.owner_user_id!==user.id)return json({error:"Business access denied"},403);
+ const key=Deno.env.get("OPENAI_API_KEY");
+ if(!key)return json({status:"provider_disconnected",error:"OPENAI_API_KEY is not configured in Supabase Edge Function Secrets. Template content is available; AI generation is disabled until a key is configured."},503);
+ const type=String(body.type||"posts");
+ if(!["posts","faq","campaign"].includes(type))return json({error:"Unsupported content type"},400);
+ const model=Deno.env.get("OPENAI_MODEL")||"gpt-6.2-astra";
+ const services=Array.isArray(business.services)?business.services.join(", "):String(business.services||"");
+ const instructions="You are an organic local-business marketing assistant. Produce truthful, non-spammy content in the language requested. Do not invent prices, guarantees, certifications, offers, reviews, customer stories, availability or facts. Keep it local and useful, avoid exaggerated claims and ad-like pressure. Use the supplied business details only. If details are missing, ask questions rather than fabricate.";
+ const input={business_name:business.name,niche:business.niche||business.business_type,description:business.description,area:business.location,services,phone:business.phone,website:business.website,language:body.language||"Hindi and simple English",goal:body.goal||"organic enquiries",type,topic:body.topic||""};
+ const prompt=type==="faq"?"Create 8 practical FAQs with concise answers, grounded only in business details. Return plain text with numbered Q/A.":type==="campaign"?"Create one organic campaign plan: audience, topic, 3 post variations, CTA, suggested cadence and measurement. Return concise plain text.":"Create 5 distinct organic social posts for this local business. Each includes a short title, body, useful customer tip, soft CTA and relevant hashtags. Return numbered plain-text posts.";
+ const response=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},body:JSON.stringify({model,instructions,input:prompt+"\nBusiness data (JSON): "+JSON.stringify(input),max_output_tokens:1200})});
+ if(!response.ok)return json({status:"provider_error",provider_status:response.status,error:"AI provider request failed. Check API key, model access, billing and quota."},502);
+ const data=await response.json();
+ const output=(data.output||[]).flatMap(o=>o.content||[]).filter(c=>c.type==="output_text").map(c=>c.text||"").join("\n").trim();
+ if(!output)return json({status:"empty_response",error:"AI provider returned no text output."},502);
+ return json({status:"generated",type,model,content:output});
+});
