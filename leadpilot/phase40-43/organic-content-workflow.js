@@ -128,7 +128,7 @@ function runOrganicContentWorkflow(input = {}) {
       type: businessType || "Not provided"
     },
 
-    contentOpportunity,
+    contentOpportunity: contentOpportunity,
     patternAnalysis,
     contentPriorityPlan,
 
