@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type","Access-Control-Allow-Methods":"POST, OPTIONS"};
-const json=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{...cors,"Content-Type":"application/json"}});
+const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...cors,"Content-Type":"application/json"}});
 const dedupe=(s:string)=>s.toLowerCase().replace(/\s+/g," ").slice(0,500);
 Deno.serve(async(req)=>{
  if(req.method==="OPTIONS")return new Response("ok",{headers:cors});
@@ -60,7 +60,7 @@ Deno.serve(async(req)=>{
     if(!saved.error)candidates++;
    }
    externalStatus="connected"; 
-  }catch(e){externalStatus="error";externalError=String(e?.message||e);}
+  }catch(e){externalStatus="error";externalError=e instanceof Error?e.message:String(e);}
  }
  const completed=new Date().toISOString();
  const report={existing_real_enquiries:leadCount||0,verified_intent_signals:signalCount||0,pending_search_candidates:candidates,available_source_types:available.map(s=>s.display_name),external_search_status:externalStatus,external_search_error:externalError,queries:searchQueries,note:apiKey?"External public search candidates saved as pending review only. No leads were auto-created or contact data scraped.":"External search is disconnected (API key missing). This run checked connected internal sources only; no fake leads created."};
