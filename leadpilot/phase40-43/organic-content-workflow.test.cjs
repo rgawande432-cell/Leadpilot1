@@ -171,6 +171,9 @@ test("Step 43: completes the full organic content workflow", () => {
   assert.equal(result.success, true);
   assert.equal(result.step, 43);
   assert.equal(result.status, "workflow_completed");
+  assert.equal(result.contentOpportunity.success, true);
+  assert.equal(result.contentOpportunity.step, 40);
+  assert.equal(result.contentOpportunity.analysis.detectedIntent, "pricing");
 
   assert.equal(
     result.workflowSummary.messagesAnalyzed,
