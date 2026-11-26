@@ -14,6 +14,7 @@ jobs:
           node-version: 20
       - name: Run backend lead-processing regression tests
         run: npm --prefix backend test
+      - name: Extract inline scripts and syntax-check
         run: |
           python3 - <<'PY'
           from html.parser import HTMLParser
