@@ -48,3 +48,12 @@ jobs:
           print(f'Extracted {len(parser.scripts)} inline script(s)')
           PY
           for f in /tmp/inline_*.mjs; do node --check "$f"; done
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Type-check Supabase Edge Functions
+        run: |
+          for f in supabase/functions/*/index.ts; do
+            echo "Checking $f"
+            deno check "$f"
+          done
