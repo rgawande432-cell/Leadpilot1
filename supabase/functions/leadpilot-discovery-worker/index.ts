@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type, x-leadpilot-worker-token","Access-Control-Allow-Methods":"POST, OPTIONS"};
-const json=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{...cors,"Content-Type":"application/json"}});
+const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...cors,"Content-Type":"application/json"}});
 const clean=(s:string)=>String(s||"").toLowerCase().replace(/\\s+/g," ").trim().slice(0,600);
 Deno.serve(async(req)=>{
  if(req.method==="OPTIONS")return new Response("ok",{headers:cors});
@@ -66,7 +66,7 @@ Deno.serve(async(req)=>{
       const saved=await admin.from("ai_discovery_signals").upsert(payload,{onConflict:"business_id,dedupe_key"}).select("id").single();
       if(!saved.error)savedCount++;
      }
-    }catch(e){externalStatus="error";errorText=String(e?.message||e);}
+    }catch(e){externalStatus="error";errorText=e instanceof Error?e.message:String(e);}
    }
    const completed=new Date().toISOString();
    const report={business_name:biz.name,existing_real_enquiries:leadCount||0,verified_intent_signals:verifiedCount||0,pending_search_candidates:savedCount,external_search_status:externalStatus,external_search_error:errorText,queries:apiKey?queries:[],note:apiKey?"Public search results filtered by evidence and business relevance; all saved as pending signals, not leads.":"No search key configured; internal account counts only, no fabricated records."};
@@ -74,7 +74,7 @@ Deno.serve(async(req)=>{
    await admin.from("ai_discovery_jobs").update({status:externalStatus==="error"?"failed":"completed",completed_at:completed,next_retry_at:externalStatus==="error"?new Date(Date.now()+Math.min(60,10*(job.attempts||1))*60000).toISOString():null,error_message:errorText||null,metadata:{...(job.metadata||{}),report}}).eq("id",job.id);
    reports.push({job_id:job.id,run_id:runId,report});
   }catch(e){
-   const message=String(e?.message||e),when=new Date().toISOString();
+   const message=e instanceof Error?e.message:String(e),when=new Date().toISOString();
    if(runId)await admin.from("ai_discovery_runs").update({status:"failed",completed_at:when,error_summary:message}).eq("id",runId);
    await admin.from("ai_discovery_jobs").update({status:"failed",completed_at:when,next_retry_at:new Date(Date.now()+Math.min(60,10*(job.attempts||1))*60000).toISOString(),error_message:message}).eq("id",job.id);
    reports.push({job_id:job.id,error:message});
