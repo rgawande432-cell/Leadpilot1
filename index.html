@@ -43,6 +43,8 @@ footer{margin-top:45px;border-top:1px solid #e1e7f0;padding:25px 0;color:#7b879a
 .cards,.grid{grid-template-columns:1fr}
 .wrap{padding:15px}
 }
+
+.radar-box{margin:16px 0;background:#fff;border:1px solid #dbe5f5;border-radius:16px;padding:20px}.radar-queries{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.query-chip{background:#edf2ff;color:#2457d6;border-radius:20px;padding:8px 11px;font-size:13px}.radar-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.radar-result{border:1px solid #e1e8f3;border-radius:12px;padding:13px;margin:10px 0}.radar-score{font-weight:bold;color:#2457d6}.radar-muted{font-size:12px;color:#7b879a}.radar-results{max-height:440px;overflow:auto}@media(max-width:720px){.radar-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -229,7 +231,19 @@ const f=$('businessForm');
 f.elements.services.value=(biz?.services||[]).join(', ');
 }
 
-function ideas(){
+
+function radarSetup(){
+const area=biz.location||'your area',business=biz.name||'local business',niche=biz.niche||biz.business_type||'products/services',services=(biz.services||[]).join(' OR ')||niche;
+const queries=[`"${niche}" looking for ${area}`, `need ${services} near ${area}`, `recommend ${niche} ${area}`, `where can I get ${niche} ${area}`, `price enquiry ${niche} ${area}`, `looking for ${services} ${area}`];
+$('radarQueries').innerHTML=queries.map(q=>'<span class="query-chip">'+esc(q)+'</span>').join('');
+$('copyRadarQueries').onclick=()=>navigator.clipboard.writeText(queries.join('\n')).then(()=>{$('copyRadarQueries').textContent='Copied searches!';setTimeout(()=> $('copyRadarQueries').textContent='Copy search ideas',1800)}).catch(()=>prompt('Copy these search ideas',queries.join('\n')));
+const key='leadpilot_intent_signals_'+biz.id;
+const getItems=()=>{try{return JSON.parse(localStorage.getItem(key)||'[]')}catch{return[]}};
+function render(){const items=getItems();$('radarCount').textContent=items.length;$('radarSaved').innerHTML=items.length?items.slice().reverse().map(x=>'<div class="radar-result"><div class="bar"><b>'+esc(x.source)+'</b><span class="radar-score">'+x.score+'/100 · '+esc(x.level)+'</span></div><p>'+esc(x.evidence)+'</p><p class="radar-muted">'+esc(x.intent)+' · '+esc(x.date)+' · '+esc(x.url)+'</p><button class="btn alt" data-rdel="'+esc(x.id)+'">Delete signal</button></div>').join(''):'<p>No signals captured. Add a genuine source signal above.</p>'; $('radarSaved').querySelectorAll('[data-rdel]').forEach(b=>b.onclick=()=>{localStorage.setItem(key,JSON.stringify(getItems().filter(x=>x.id!==b.dataset.rdel)));render();});}
+$('radarForm').onsubmit=e=>{e.preventDefault();const fd=new FormData(e.target),source=String(fd.get('source')).trim(),url=String(fd.get('url')).trim(),evidence=String(fd.get('evidence')).trim(),intent=String(fd.get('intent')),date=String(fd.get('date'));if(!fd.get('verified')){say('radarMsg','Please verify genuine source evidence and tick the confirmation box before saving.');return;}let score=intent==='explicit'?85:intent==='question'?60:30;const freshness=Math.floor((Date.now()-new Date(date+'T00:00:00').getTime())/86400000);if(freshness<=7)score+=10;else if(freshness<=30)score+=5;else if(freshness>90)score-=20;const matching=[niche,...(biz.services||[])].filter(Boolean).some(t=>evidence.toLowerCase().includes(String(t).toLowerCase()));if(matching)score+=5;score=Math.max(0,Math.min(100,score));const level=score>=90?'Strong signal':score>=75?'High intent':score>=50?'Needs review':'Research only';const items=getItems();items.push({id:crypto.randomUUID(),source,url,evidence,intent,date,score,level,savedAt:new Date().toISOString()});localStorage.setItem(key,JSON.stringify(items));e.target.reset();say('radarMsg','Saved for review: '+score+'/100 ('+level+'). This score is a prioritization aid, not proof of a lead.');render();};
+render();
+}
+\nfunction ideas(){
 const name=biz.name||'Our business',niche=biz.niche||biz.business_type||'our services',area=biz.location||'your area';
 const services=(biz.services||[]).filter(Boolean),serviceLine=services.length?services.join(', '):niche;
 const phone=biz.phone||'',website=biz.website||'';
@@ -250,7 +264,7 @@ const p=await db.from('businesses').select('*').eq('owner_user_id',user.id).orde
 if(p.error){say('businessMsg','Profile error: '+p.error.message);return;}
 biz=p.data;
 if(!biz){fill();show('businessModal');return;}
-show('dashboard');$('welcome').textContent='Welcome, '+biz.name;$('heroProfile').textContent='Saved';ideas();
+show('dashboard');$('welcome').textContent='Welcome, '+biz.name;$('heroProfile').textContent='Saved';ideas();radarSetup();
 const q=await db.from('leads').select('id,name,email,phone,message,source,status,score,created_at').eq('business_id',biz.id).order('created_at',{ascending:false});
 if(q.error){$('leadRows').textContent='Could not load enquiries: '+q.error.message;return;}
 const ls=q.data||[],fresh=ls.filter(x=>x.status==='New').length;
