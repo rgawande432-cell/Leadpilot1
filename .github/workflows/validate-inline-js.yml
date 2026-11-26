@@ -12,7 +12,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Run backend lead-processing regression tests\n        run: npm --prefix backend test\n      - name: Extract inline scripts and syntax-check
+      - name: Run backend lead-processing regression tests
+        run: npm --prefix backend test
         run: |
           python3 - <<'PY'
           from html.parser import HTMLParser
