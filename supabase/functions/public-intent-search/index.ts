@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 import { parseGoogleNewsRss } from "../_shared/google-news-rss.js";
+import { parseGdeltResponse } from "../_shared/gdelt-response.js";
 const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type","Access-Control-Allow-Methods":"POST, OPTIONS"};
 const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...cors,"Content-Type":"application/json"}});
 
@@ -33,7 +34,7 @@ Deno.serve(async(req)=>{
    endpoint.searchParams.set("query",query);endpoint.searchParams.set("mode","ArtList");endpoint.searchParams.set("format","json");endpoint.searchParams.set("maxrecords","12");endpoint.searchParams.set("timespan","7d");endpoint.searchParams.set("sort","DateDesc");
    try{
     const response=await fetch(endpoint,{headers:{"Accept":"application/json"}});
-    if(response.ok){const raw=await response.text();try{const data=JSON.parse(raw);articles=Array.isArray(data.articles)?data.articles:[];fallback=!articles.length;}catch{fallback=true;}}
+    if(response.ok){const raw=await response.text();const parsed=parseGdeltResponse(raw);articles=parsed.articles;fallback=!articles.length;}
     else fallback=response.status===429||response.status>=500;
    }catch{fallback=true;}
    if(fallback||!articles.length){
