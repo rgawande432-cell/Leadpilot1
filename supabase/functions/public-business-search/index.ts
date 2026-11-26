@@ -7,7 +7,7 @@ const cors = {
 };
 const respond = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
-const clean = (value: unknown, max = 100) => String(value ?? "").trim().replace(/[,%()]/g, " ").replace(/\s+/g, " ").slice(0, max);
+const clean = (value: unknown, max = 100) => String(value ?? "").trim().replace(/[^\p{L}\p{N}\s\-'.]/gu, " ").replace(/\s+/g, " ").slice(0, max);
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
