@@ -13,6 +13,7 @@ test("database migration requires verified contact fields before contact_verifie
   assert.match(migration, /contact_verified_requires_contact/);
   assert.match(migration, /status <> 'contact_verified'/);
   assert.match(migration, /contact_verified_at is not null/);
+  assert.match(migration, /contact_verified_by is not null/);
   assert.match(migration, /contact_verification_source/);
   assert.match(migration, /contact_phone/);
   assert.match(migration, /contact_email/);
@@ -36,6 +37,7 @@ test("CRM conversion RPC requires owner and verified contact, and is idempotent"
   assert.match(conversionMigration, /auth\.uid\(\)/);
   assert.match(conversionMigration, /status <> 'contact_verified'/);
   assert.match(conversionMigration, /verification_status = 'verified'/);
+  assert.match(conversionMigration, /contact_verified_by is distinct from auth\.uid/);
   assert.match(conversionMigration, /converted_lead_id/);
   assert.match(conversionMigration, /revoke all on function public\.convert_verified_prospect_to_lead/);
   assert.match(conversionMigration, /grant execute on function public\.convert_verified_prospect_to_lead.*authenticated/);
