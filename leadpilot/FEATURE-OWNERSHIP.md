@@ -7,8 +7,8 @@ This document is the development guardrail: **upgrade the canonical feature inst
 | Capability | Canonical implementation | Compatibility / callers |
 |---|---|---|
 | Lead scoring | `supabase/functions/_shared/lead-scoring.js` | `backend/src/lead-scoring.js` re-exports it; enquiry intake and Phase 32–35 use it |
-| GDELT JSON response parsing | `supabase/functions/_shared/gdelt-response.js` | Discovery worker and public intent search |
-| Google News RSS parsing | `supabase/functions/_shared/google-news-rss.js` | Discovery worker and public intent search |
+| GDELT JSON response parsing | `supabase/functions/_shared/gdelt-response.js` | Shared news search adapter |
+| Google News RSS parsing | `supabase/functions/_shared/google-news-rss.js` | Shared news search adapter |\n| GDELT + Google News RSS provider calls, fallback and result normalization | `supabase/functions/_shared/news-search-provider.js` | Scheduled worker and public intent search; injectable fetch adapter tests |
 | Lead validation | `backend/src/lead-validation.js` | Backend processing and legacy growth capture adapter |
 | Lead deduplication | `backend/src/lead-deduplication.js` | Backend pipeline and legacy growth adapter; matching is business-scoped |
 | Public enquiry intake | `supabase/functions/submit-lead/index.ts` | One intake path; database rate-limit and duplicate RPCs guard persistence |
@@ -27,7 +27,7 @@ This document is the development guardrail: **upgrade the canonical feature inst
 ## Audit status
 
 - [x] Removed identical duplicate GDELT parser implementation; one shared parser remains and is used by both discovery search paths.
-- [x] Consolidated Google News RSS parsing into one shared utility.
+- [x] Consolidated Google News RSS parsing into one shared utility.\n- [x] Consolidated GDELT and Google News RSS provider calls/fallback/result normalization into one adapter; scheduled and owner-triggered search paths use it.
 - [x] Consolidated live intake and legacy growth lead scoring into one shared scoring engine.
 - [x] Legacy lead capture validation delegates to canonical validation.
 - [x] Legacy duplicate check delegates to canonical business-scoped dedupe.
