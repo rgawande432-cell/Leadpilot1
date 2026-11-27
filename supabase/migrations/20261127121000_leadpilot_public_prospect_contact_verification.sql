@@ -25,7 +25,8 @@ alter table public.leadpilot_public_prospects
       status <> 'contact_verified'
       or (
         (nullif(trim(contact_phone), '') is not null or nullif(trim(contact_email), '') is not null)
-        and contact_verified_at is not null\n        and contact_verified_by is not null
+        and contact_verified_at is not null
+        and contact_verified_by is not null
         and nullif(trim(contact_verification_source), '') is not null
       )
     );
