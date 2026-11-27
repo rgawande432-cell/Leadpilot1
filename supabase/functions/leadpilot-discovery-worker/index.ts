@@ -24,7 +24,7 @@ Deno.serve(async(req)=>{
  const approved=isApproved("gdelt_free_news_search");
  const rssApproved=isApproved("google_news_rss");
  const searxngApproved=isApproved("searxng_self_hosted")&&!!Deno.env.get("SEARXNG_URL");
- const tavilyApproved=isApproved("tavily_search")&&!!Deno.env.get("TAVILY_API_KEY");
+ const tavilyApproved=isApproved("tavily_search")&&!!Deno.env.get("TAVILY_API_KEY");\n const braveApproved=isApproved("brave_public_web_search")&&!!Deno.env.get("BRAVE_SEARCH_API_KEY");\n const anySearchApproved=approved||rssApproved||searxngApproved||tavilyApproved||braveApproved;
  const claim=await admin.rpc("claim_leadpilot_discovery_jobs",{p_limit:1});
  if(claim.error)return json({error:claim.error.message},500);
  const jobs=claim.data||[],reports=[];
@@ -36,7 +36,7 @@ Deno.serve(async(req)=>{
     admin.from("ai_discovery_configs").select("*").eq("business_id",job.business_id).eq("status","active").single()
    ]);
    if(bErr||!biz||cErr||!cfg)throw new Error("Business or active discovery configuration missing");
-   const inserted=await admin.from("ai_discovery_runs").insert({business_id:biz.id,config_id:cfg.id,status:"running",started_at:start,source_name:approved?"Scheduled free news search":"Scheduled internal check"}).select("id").single();
+   const inserted=await admin.from("ai_discovery_runs").insert({business_id:biz.id,config_id:cfg.id,status:"running",started_at:start,source_name:anySearchApproved?"Scheduled public search":"Scheduled internal check"}).select("id").single();
    if(inserted.error)throw inserted.error;runId=inserted.data.id;
    const [{count:leadCount},{count:verifiedCount}]=await Promise.all([
     admin.from("leads").select("id",{count:"exact",head:true}).eq("business_id",biz.id),
@@ -45,12 +45,12 @@ Deno.serve(async(req)=>{
    const category=biz.niche||biz.business_type||biz.name,area=cfg.area||biz.location||"India";
    const searchQueries=buildLocalIntentQueries({niche:biz.niche,businessType:biz.business_type,businessName:biz.name,services:biz.services||[],area,keywords:cfg.keywords||[],maxQueries:8});
    const terms=[biz.niche,biz.business_type,...(biz.services||[]),...(cfg.keywords||[])].filter(Boolean).map((t:string)=>String(t).toLowerCase()).filter((t:string)=>t.length>=3);
-   let savedCount=0,articles:any[]=[],provider="none",externalStatus=approved?"connected":"source_disabled",errorText=approved?"":"Free news source disabled or terms review incomplete.",sourceHealthWarnings:string[]=[];
-   if(approved){
+   let savedCount=0,articles:any[]=[],provider="none",externalStatus=anySearchApproved?"connected":"source_disabled",errorText=anySearchApproved?"":"No approved/configured public search provider.",sourceHealthWarnings:string[]=[];
+   if(anySearchApproved){
     try{
-     const search=await fetchNewsCandidates(searchQueries,{maxRecords:20,timespan:"7d",googleNewsRssEnabled:rssApproved,searxngUrl:searxngApproved?(Deno.env.get("SEARXNG_URL")||""):"",tavilyApiKey:tavilyApproved?(Deno.env.get("TAVILY_API_KEY")||""):""});
+     const search=await fetchNewsCandidates(searchQueries,{maxRecords:20,timespan:"7d",googleNewsRssEnabled:rssApproved,searxngUrl:searxngApproved?(Deno.env.get("SEARXNG_URL")||""):"",tavilyApiKey:tavilyApproved?(Deno.env.get("TAVILY_API_KEY")||""):"",braveApiKey:braveApproved?(Deno.env.get("BRAVE_SEARCH_API_KEY")||""):""});
      for(const source of [
-      {key:"gdelt_free_news_search",name:"GDELT Project",prefix:"GDELT",approved},
+      {key:"gdelt_free_news_search",name:"GDELT Project",prefix:"GDELT",approved},\n      {key:"brave_public_web_search",name:"Brave Search",prefix:"Brave Search",approved:braveApproved},
       {key:"google_news_rss",name:"Google News RSS",prefix:"Google News RSS",approved:rssApproved},
       {key:"searxng_self_hosted",name:"SearXNG",prefix:"SearXNG",approved:searxngApproved},
       {key:"tavily_search",name:"Tavily",prefix:"Tavily",approved:tavilyApproved}
@@ -80,7 +80,7 @@ Deno.serve(async(req)=>{
     }
    }
    const completed=new Date().toISOString();
-   const report={business_name:biz.name,existing_real_enquiries:leadCount||0,verified_intent_signals:verifiedCount||0,pending_search_candidates:savedCount,external_search_status:externalStatus,external_search_error:errorText,provider_health_warnings:sourceHealthWarnings,provider,queries:approved?searchQueries:[],note:approved?"Public news results are weak signals, not confirmed buyer intent. Data source attribution: GDELT Project and/or Google News RSS. Pending verification only.":"No external provider active; no fabricated leads or signals created."};
+   const report={business_name:biz.name,existing_real_enquiries:leadCount||0,verified_intent_signals:verifiedCount||0,pending_search_candidates:savedCount,external_search_status:externalStatus,external_search_error:errorText,provider_health_warnings:sourceHealthWarnings,provider,queries:approved?searchQueries:[],note:anySearchApproved?"Public search results are weak signals, not confirmed buyer intent. Contact details are not scraped; pending verification only.":"No external provider active; no fabricated leads or signals created."};
    await admin.from("ai_discovery_runs").update({status:externalStatus==="error"?"failed":"completed",completed_at:completed,signals_found:savedCount,leads_created:0,source_name:provider||"Scheduled internal check",error_summary:errorText||report.note}).eq("id",runId);
    await admin.from("ai_discovery_jobs").update({status:externalStatus==="error"?"failed":"completed",completed_at:completed,next_retry_at:externalStatus==="error"?new Date(Date.now()+Math.min(60,10*(job.attempts||1))*60000).toISOString():null,error_message:errorText||null,metadata:{...(job.metadata||{}),report}}).eq("id",job.id);
    reports.push({job_id:job.id,run_id:runId,report});
