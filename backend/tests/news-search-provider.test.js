@@ -178,7 +178,8 @@ test("Brave Search fallback returns normalized public candidates and uses API-ke
   const request=calls.find(x=>x.url.includes("api.search.brave.com"));
   assert.equal(request.init.headers["X-Subscription-Token"],"brave-test");
   assert.match(request.url,/country=IN/);
-  assert.match(request.url,/freshness=pw/);\n  assert.match(request.url,/result_filter=/);
+  assert.match(request.url,/freshness=pw/);
+  assert.match(request.url,/result_filter=/);
 });
 
 test("Brave Search is not called without an approved API key passed to the adapter",async()=>{
