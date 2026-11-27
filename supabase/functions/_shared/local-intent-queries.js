@@ -1,6 +1,6 @@
 // Shared, bounded query expansion for local-business public intent discovery.
 // These are search phrases only; results remain candidates until owner-reviewed.
-const clean = (value) => String(value || "").replace(/["\\\\]/g, " ").replace(/\\s+/g, " ").trim();
+const clean = (value) => String(value || "").replace(/["\\\\]/g, " ").replace(/\s+/g, " ").trim();
 
 export function buildLocalIntentQueries({ niche, businessType, businessName, services = [], area, keywords = [], maxQueries = 8 } = {}) {
   const category = clean(niche || businessType || businessName);
@@ -18,7 +18,7 @@ export function buildLocalIntentQueries({ niche, businessType, businessName, ser
       `"${keyword}" "${location}" "request quote"`
     ])
   ];
-  const unique = [...new Set(candidates.map((q) => q.replace(/\\s+/g, " ").trim()).filter(Boolean))];
+  const unique = [...new Set(candidates.map((q) => q.replace(/\s+/g, " ").trim()).filter(Boolean))];
   const limit = Math.max(1, Math.min(10, Number(maxQueries) || 8));
   return unique.slice(0, limit);
 }
