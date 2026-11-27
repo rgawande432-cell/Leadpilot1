@@ -26,7 +26,8 @@ Deno.serve(async(req)=>{
  const gdeltApproved=approved("gdelt_free_news_search");
  const rssApproved=approved("google_news_rss");
  const searxngApproved=approved("searxng_self_hosted")&&!!Deno.env.get("SEARXNG_URL");
- const tavilyApproved=approved("tavily_search")&&!!Deno.env.get("TAVILY_API_KEY");\n const braveApproved=approved("brave_public_web_search")&&!!Deno.env.get("BRAVE_SEARCH_API_KEY");
+ const tavilyApproved=approved("tavily_search")&&!!Deno.env.get("TAVILY_API_KEY");
+ const braveApproved=approved("brave_public_web_search")&&!!Deno.env.get("BRAVE_SEARCH_API_KEY");
  if(!gdeltApproved&&!rssApproved&&!searxngApproved&&!tavilyApproved&&!braveApproved)return json({status:"provider_disconnected",error:"No public search provider is enabled, terms-reviewed, and configured."},403);
  if(body.action==="save"){
   const candidate=body.candidate;
