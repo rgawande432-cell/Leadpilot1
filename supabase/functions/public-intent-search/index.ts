@@ -39,8 +39,8 @@ Deno.serve(async(req)=>{
  const queryList=buildLocalIntentQueries({niche,businessType:business.business_type,businessName:business.name,services:business.services||[],area,keywords:cfg?.keywords||[],maxQueries:8});
  const provider="GDELT Project and/or Google News RSS";
  type Candidate={query:string,title:string,url:string,domain:string,date:string};
- const searched=await fetchNewsCandidates(queryList,{maxRecords:12,timespan:"7d"});
- for(const source of [{key:"gdelt_free_news_search",name:"GDELT Project",prefix:"GDELT"},{key:"google_news_rss",name:"Google News RSS",prefix:"Google News RSS"}]){
+ const searched=await fetchNewsCandidates(queryList,{maxRecords:12,timespan:"7d",searxngUrl:Deno.env.get("SEARXNG_URL")||""});
+ for(const source of [{key:"gdelt_free_news_search",name:"GDELT Project",prefix:"GDELT"},{key:"google_news_rss",name:"Google News RSS",prefix:"Google News RSS"},{key:"searxng_self_hosted",name:"SearXNG",prefix:"SearXNG"}]){
   const used=searched.providers.includes(source.name),failed=searched.errors.some((e:string)=>e.startsWith(source.prefix));
   await recordDiscoverySourceHealth({admin:client,businessId,sourceKey:source.key,status:failed?(used?"degraded":"failed"):(used?"healthy":"no_results"),successful:used||!failed,notes:searched.errors.filter((e:string)=>e.startsWith(source.prefix)).join("; ")||(!used?"No matching articles in search window":"Provider returned articles")});
  }
