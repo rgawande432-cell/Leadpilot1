@@ -96,3 +96,31 @@ test("optional Tavily fallback is used after SearXNG is absent or fails", async 
   assert.equal(request.init.method, "POST");
   assert.equal(JSON.parse(request.init.body).api_key, "tvly-test");
 });
+
+
+test("optional provider result normalization ignores malformed and unsafe URLs", async () => {
+  const searxFetcher = async (url) => {
+    if (String(url).includes("api.gdeltproject.org")) return new Response(JSON.stringify({ articles: [] }), { status: 200 });
+    if (String(url).includes("news.google.com")) return new Response("<rss><channel></channel></rss>", { status: 200 });
+    return new Response(JSON.stringify({ results: [
+      { title: "Malformed", url: "not a url" },
+      { title: "Unsafe", url: "javascript:alert(1)" },
+      { title: "Valid candidate", url: "https://example.org/valid", publishedDate: "2026-11-27" }
+    ] }), { status: 200 });
+  };
+  const searx = await fetchNewsCandidates(["intent"], { fetcher: searxFetcher, searxngUrl: "https://search.example.test" });
+  assert.equal(searx.results.length, 1);
+  assert.equal(searx.results[0].url, "https://example.org/valid");
+
+  const tavilyFetcher = async (url) => {
+    if (String(url).includes("api.gdeltproject.org")) return new Response(JSON.stringify({ articles: [] }), { status: 200 });
+    if (String(url).includes("news.google.com")) return new Response("<rss><channel></channel></rss>", { status: 200 });
+    return new Response(JSON.stringify({ results: [
+      { title: "Bad URL", url: "::::" },
+      { title: "Tavily candidate", url: "https://example.net/good" }
+    ] }), { status: 200 });
+  };
+  const tavily = await fetchNewsCandidates(["intent"], { fetcher: tavilyFetcher, tavilyApiKey: "tvly-test" });
+  assert.equal(tavily.results.length, 1);
+  assert.equal(tavily.results[0].url, "https://example.net/good");
+});
