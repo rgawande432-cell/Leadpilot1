@@ -9,14 +9,14 @@ const worker=await readFile(resolve(root,"supabase/functions/leadpilot-discovery
 
 test("discovery worker persists health records for providers when search is disabled",()=>{
   assert.match(worker,/status:"disabled",successful:false/);
-  for(const sourceKey of ["gdelt_free_news_search","google_news_rss","searxng_self_hosted","tavily_search"])assert.ok(worker.includes(sourceKey),sourceKey);
+  for(const sourceKey of ["gdelt_free_news_search","brave_public_web_search","google_news_rss","searxng_self_hosted","tavily_search"])assert.ok(worker.includes(sourceKey),sourceKey);
   assert.match(worker,/sourceHealthWarnings/);
 });
 
 test("worker gates optional search providers by source approval and credentials",()=>{
   assert.match(worker,/googleNewsRssEnabled:rssApproved/);
   assert.match(worker,/searxngApproved\?\(Deno\.env\.get\("SEARXNG_URL"\)/);
-  assert.match(worker,/tavilyApproved\?\(Deno\.env\.get\("TAVILY_API_KEY"\)/);
+  assert.match(worker,/tavilyApproved\?\(Deno\.env\.get\("TAVILY_API_KEY"\)/);\n  assert.match(worker,/braveApproved\?\(Deno\.env\.get\("BRAVE_SEARCH_API_KEY"\)/);\n  assert.match(worker,/braveApiKey:braveApproved/);
 });
 
 
@@ -32,7 +32,7 @@ test("public intent search gates optional providers on approval and configured c
   assert.match(search,/const rssApproved=approved\("google_news_rss"\)/);
   assert.match(search,/googleNewsRssEnabled:rssApproved/);
   assert.match(search,/searxngApproved\?\(Deno\.env\.get\("SEARXNG_URL"\)/);
-  assert.match(search,/tavilyApproved\?\(Deno\.env\.get\("TAVILY_API_KEY"\)/);
+  assert.match(search,/tavilyApproved\?\(Deno\.env\.get\("TAVILY_API_KEY"\)/);\n  assert.match(search,/braveApproved\?\(Deno\.env\.get\("BRAVE_SEARCH_API_KEY"\)/);\n  assert.match(search,/braveApiKey:braveApproved/);
   assert.match(search,/No public search provider is enabled, terms-reviewed, and configured/);
 });
 
