@@ -37,7 +37,7 @@ Deno.serve(async(req)=>{
  let candidates=0,externalStatus=apiKey?(braveApproved?"connected":"source_disabled"):"disconnected",externalError=apiKey&&!braveApproved?"Brave source is disabled or terms review is incomplete.":"",searchQueries:string[]=[];
  if(apiKey&&braveApproved){
   const niche=business.niche||business.business_type||business.name,area=cfg.area||business.location||"India",services=(business.services||[]).slice(0,4).join(" ")||niche;
-  searchQueries=[`"${niche}" looking for ${area}`,`need ${services} near ${area}`,`"${niche}" price quote ${area}`,`recommend ${niche} ${area}`,`"${niche}" buyer requirement ${area}`];
+  searchQueries=[`"${niche}" looking for ${area}`,`need ${services} near ${area}`,`"${niche}" price quote ${area}`,...(cfg.keywords||[]).filter(Boolean).slice(0,2).map((keyword:string)=>`"${keyword}" "${area}" looking for`)];
   const results=[];
   try{
    for(const q of searchQueries){
