@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type","Access-Control-Allow-Methods":"POST, OPTIONS"};
 const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...cors,"Content-Type":"application/json"}});
 const xmlDecode=(s:string)=>s.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g,"$1").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#39;/g,"'");
-const parseRss=(xml:string)=>[...xml.matchAll(/<item\b[^>]*>([\s\S]*?)<\/item>/gi)].map(m=>{const text=m[1];const field=(tag:string)=>xmlDecode((text.match(new RegExp("<"+tag+"[^>]*>([\\s\\S]*?)<\\/"+tag+">","i"))||[])[1]||"").trim();return {title:field("title"),url:field("link"),date:field("pubDate")};}).filter(x=>x.title&&x.url);
+const parseRss=(xml:string)=>[...xml.matchAll(/<item\b[^>]*>([\s\S]*?)<\/item>/gi)].map(m=>{const text=m[1];const field=(tag:string)=>xmlDecode((text.match(new RegExp("<"+tag+"[^>]*>([\\s\\S]*?)<\\/"+tag+">","i"))||[])[1]||"").trim();return {title:field("title"),url:field("link"),date:field("pubDate"),description:field("description")};}).filter(x=>x.title&&x.url);
 Deno.serve(async(req)=>{
  if(req.method==="OPTIONS")return new Response("ok",{headers:cors});
  if(req.method!=="POST")return json({error:"POST required"},405);
@@ -38,15 +38,21 @@ Deno.serve(async(req)=>{
   }else if(response.status===429||response.status>=500)fallbackReason="GDELT HTTP "+response.status;
   else return json({status:"provider_error",provider_status:response.status,message:"GDELT search failed."},502);
   if(fallbackReason||!articles.length){
-   const rssUrl=new URL("https://news.google.com/rss/search");rssUrl.searchParams.set("q",query+" when:7d");rssUrl.searchParams.set("hl","en-IN");rssUrl.searchParams.set("gl","IN");rssUrl.searchParams.set("ceid","IN:en");
-   const rss=await fetch(rssUrl,{headers:{"Accept":"application/rss+xml, application/xml, text/xml"}});
-   if(!rss.ok)return json({status:"provider_error",provider_status:rss.status,message:"Free Google News RSS fallback failed."},502);
-   articles=parseRss(await rss.text());
+   const searchTerms=[...new Set([niche,...(business.services||[]),...(body.keywords||[])].filter(Boolean).map((t:string)=>String(t).trim()).filter((t:string)=>t.length>=3))].slice(0,4);
+   const rssQueries=[...new Set([query,...searchTerms.map((t:string)=>'"'+t+'" "'+area+'"'),...searchTerms.slice(0,2).map((t:string)=>'"'+t+'" ('+'looking for OR need OR quote OR recommend'+') "'+area+'"')])].slice(0,5);
+   const rssArticles:any[]=[];
+   for(const rssQuery of rssQueries){
+    const rssUrl=new URL("https://news.google.com/rss/search");rssUrl.searchParams.set("q",rssQuery+" when:7d");rssUrl.searchParams.set("hl","en-IN");rssUrl.searchParams.set("gl","IN");rssUrl.searchParams.set("ceid","IN:en");
+    const rss=await fetch(rssUrl,{headers:{"Accept":"application/rss+xml, application/xml, text/xml"}});
+    if(rss.ok)rssArticles.push(...parseRss(await rss.text()));
+   }
+   if(!rssArticles.length)return json({status:"provider_error",message:"Free Google News RSS returned no results."},502);
+   articles=rssArticles;provider="Google News RSS fallback";
   }
   const uniqueMap=new Map<string,{title:string,url:string,domain:string,date:string}>();
   for(const item of articles){try{const u=new URL(item.url);if(!["http:","https:"].includes(u.protocol))continue;uniqueMap.set(u.href,{title:item.title||"",url:u.href,domain:item.domain||u.hostname,date:item.seendate||item.date||""});}catch{}}
   const unique=[...uniqueMap.values()];
-  results=unique.slice(0,25).map(r=>({query,title:r.title,url:r.url,snippet:"",source_domain:r.domain,date:r.date}));
+  results=unique.slice(0,25).map(r=>({query,title:r.title,url:r.url,snippet:r.description||"",source_domain:r.domain,date:r.date}));
  }catch{return json({status:"provider_error",message:"Free search provider and RSS fallback connection failed."},502);}
  return json({status:"candidates_found",provider,business:{name:business.name,area,niche,services},queries:[query],results,count:results.length,attribution:"Data: GDELT Project (https://www.gdeltproject.org/) and/or Google News RSS; links to original publishers.",warning:"News results are weak signals, not confirmed buyer intent. Review the article, source and relevance before saving. No contacts are scraped and no CRM leads are automatically created."});
 });
