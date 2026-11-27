@@ -138,3 +138,26 @@ test("Google News RSS fallback is skipped when source approval is disabled", asy
   assert.deepEqual(result.results,[]);
   assert.deepEqual(result.providers,[]);
 });
+
+
+test("provider success tracking distinguishes empty results from failures", async () => {
+  const fetcher=async(url)=>{
+    if(String(url).includes("api.gdeltproject.org"))return new Response(JSON.stringify({articles:[]}),{status:200});
+    return new Response("<rss><channel></channel></rss>",{status:200});
+  };
+  const result=await fetchNewsCandidates(["empty query"],{fetcher});
+  assert.deepEqual(result.results,[]);
+  assert.deepEqual(result.providers,[]);
+  assert.deepEqual(result.providerSuccesses,["GDELT Project","Google News RSS"]);
+  assert.deepEqual(result.errors,[]);
+});
+
+test("rate-limited primary source can still be a completed scan when RSS succeeds empty", async () => {
+  const fetcher=async(url)=>{
+    if(String(url).includes("api.gdeltproject.org"))return new Response("rate limited",{status:429});
+    return new Response("<rss><channel></channel></rss>",{status:200});
+  };
+  const result=await fetchNewsCandidates(["empty fallback"],{fetcher});
+  assert.deepEqual(result.providerSuccesses,["Google News RSS"]);
+  assert.match(result.errors[0],/GDELT HTTP 429/);
+});
