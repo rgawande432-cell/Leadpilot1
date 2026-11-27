@@ -6,7 +6,8 @@ import { dirname, resolve } from "node:path";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const html = await readFile(resolve(root, "index.html"), "utf8");
-const migration = await readFile(resolve(root, "supabase/migrations/20261127121000_leadpilot_public_prospect_contact_verification.sql"), "utf8");\nconst conversionMigration = await readFile(resolve(root, "supabase/migrations/20261127122000_leadpilot_verified_prospect_crm_conversion.sql"), "utf8");
+const migration = await readFile(resolve(root, "supabase/migrations/20261127121000_leadpilot_public_prospect_contact_verification.sql"), "utf8");
+const conversionMigration = await readFile(resolve(root, "supabase/migrations/20261127122000_leadpilot_verified_prospect_crm_conversion.sql"), "utf8");
 
 test("database migration requires verified contact fields before contact_verified status", () => {
   assert.match(migration, /contact_verified_requires_contact/);
