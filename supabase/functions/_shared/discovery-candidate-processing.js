@@ -25,7 +25,7 @@ function getTermMatches(text, terms = []) {
     .filter(term => normalized.includes(term));
 }
 
-/** @param {{admin:any,businessId:string,runId:string,candidates?:any[],terms?:string[],mode?:string,sourceName?:string,maxCandidates?:number}} options */
+/** @param {{admin:any,businessId:string,runId?:string,candidates?:any[],terms?:string[],mode?:string,sourceName?:string,maxCandidates?:number}} options */
 export async function saveDiscoveryCandidates({
   admin, businessId, runId, candidates = [], terms = [], mode = "text_intent",
   sourceName = "Public search", maxCandidates = 25
@@ -49,7 +49,7 @@ export async function saveDiscoveryCandidates({
     const score = Math.min(cap, base + Math.min(mode === "title_explicit" ? 16 : 24, matches.length * perMatch));
     const payload = {
       business_id: businessId,
-      run_id: runId,
+      run_id: runId || null,
       source_name: sourceName,
       source_url: candidate.url,
       evidence: evidence.slice(0, 1800),
