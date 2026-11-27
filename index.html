@@ -200,6 +200,14 @@ let user=null,biz=null,mode='signup';
 const show=id=>$(id).classList.remove('hidden');
 const hide=id=>$(id).classList.add('hidden');
 const say=(id,s)=>$(id).textContent=s;
+const authFriendlyError=error=>{
+const code=String(error?.code||error?.error_code||'');
+const message=String(error?.message||error||'');
+if(code==='over_email_send_rate_limit'||/email rate limit exceeded/i.test(message))return 'Supabase email sending limit reached. Confirmation/reset email was not sent. Stop repeated requests and configure custom SMTP, then try again.';
+if(/invalid login credentials/i.test(message))return 'Email or password not recognized. If signup was blocked by email sending limits, the account may not have been created. After SMTP is configured, try signup again or request a password reset.';
+if(/email not confirmed/i.test(message))return 'Email confirmation is still pending. Check Inbox/Spam or resend confirmation after email delivery is restored.';
+return message||'Authentication request failed. Please retry later.';
+};
 const esc=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 function wireLandingFeatures(){document.querySelectorAll('[data-public-feature]').forEach(b=>b.onclick=e=>{e.stopPropagation();auth('signup');});['featureProfile','featureCRM','featureContent'].forEach(id=>{const el=$(id);if(el){el.onclick=()=>auth('signup');el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();auth('signup');}};}});$('exploreBtn')?.addEventListener('click',()=>document.getElementById('features')?.scrollIntoView({behavior:'smooth'}));}
@@ -374,14 +382,14 @@ $('authGo').disabled=true;$('authGo').textContent=mode==='signup'?'Creating acco
 try{
 const redirect=location.origin+location.pathname;
 const result=mode==='signup'?await db.auth.signUp({email,password,options:{emailRedirectTo:redirect}}):await db.auth.signInWithPassword({email,password});
-if(result.error){say('authMsg',result.error.message);return;}
+if(result.error){say('authMsg',authFriendlyError(result.error));return;}
 if(mode==='signup'&&!result.data.session){say('authMsg','Account created. If confirmation is enabled, check Inbox/Spam. If email is delayed, use Resend confirmation below.');return;}
 hide('authModal');user=result.data.user;await load();
 }catch(err){say('authMsg','Connection error. Please check internet and retry. '+(err?.message||''));}
 finally{$('authGo').disabled=false;$('authGo').textContent=mode==='signup'?'Create account':'Login';}
 };
 $('resendConfirm').onclick=async()=>{const email=$('email').value.trim().toLowerCase();if(!email||!$('email').checkValidity()){say('authMsg','Enter the account email first.');$('email').focus();return;}const b=$('resendConfirm');b.disabled=true;say('authMsg','Sending confirmation email…');try{const x=await db.auth.resend({type:'signup',email,options:{emailRedirectTo:location.origin+location.pathname}});say('authMsg',x.error?'Could not resend: '+x.error.message:'Confirmation request sent. Check Inbox and Spam.');}catch(e){say('authMsg','Email resend error: '+(e?.message||'Please try again.'));}finally{b.disabled=false;}};
-$('forgotPassword').onclick=async()=>{const email=$('email').value.trim().toLowerCase();if(!email||!$('email').checkValidity()){say('authMsg','Enter your account email first.');$('email').focus();return;}const b=$('forgotPassword');b.disabled=true;say('authMsg','Sending password reset email…');try{const x=await db.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});say('authMsg',x.error?'Reset failed: '+x.error.message:'If the account exists, a password reset email has been requested. Check Inbox and Spam.');}catch(e){say('authMsg','Reset request error: '+(e?.message||'Please retry.'));}finally{b.disabled=false;}};
+$('forgotPassword').onclick=async()=>{const email=$('email').value.trim().toLowerCase();if(!email||!$('email').checkValidity()){say('authMsg','Enter your account email first.');$('email').focus();return;}const b=$('forgotPassword');b.disabled=true;say('authMsg','Sending password reset email…');try{const x=await db.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});say('authMsg',x.error?'Reset failed: '+authFriendlyError(x.error):'If the account exists, a password reset email has been requested. Check Inbox and Spam.');}catch(e){say('authMsg','Reset request error: '+(e?.message||'Please retry.'));}finally{b.disabled=false;}};
 db.auth.onAuthStateChange(async(event,session)=>{if(event==='PASSWORD_RECOVERY'&&session){const next=prompt('Enter your new password (minimum 6 characters):');if(next&&next.length>=6){const result=await db.auth.updateUser({password:next});alert(result.error?'Password update failed: '+result.error.message:'Password updated. Please log in with the new password.');}else if(next!==null){alert('Password must be at least 6 characters.');}}});
 
 $('businessForm').onsubmit=async e=>{
