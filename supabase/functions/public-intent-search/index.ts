@@ -1,7 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-import { parseGoogleNewsRss } from "../_shared/google-news-rss.js";
-import { parseGdeltResponse } from "../_shared/gdelt-response.js";
+import { fetchNewsCandidates } from "../_shared/news-search-provider.js";
 const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type","Access-Control-Allow-Methods":"POST, OPTIONS"};
 const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...cors,"Content-Type":"application/json"}});
 
@@ -26,6 +25,8 @@ Deno.serve(async(req)=>{
  const queryList=[`"${niche}" "${area}"`,`"${serviceTerms}" "${area}"`,`"${niche}" "${area}" "looking for"`].filter((q,i,a)=>a.indexOf(q)===i);
  const provider="GDELT Project and/or Google News RSS";
  type Candidate={query:string,title:string,url:string,domain:string,date:string};
- const searched=await fetchNewsCandidates(queryList,{maxRecords:12,timespan:"7d"});\n if(!searched.results.length&&searched.errors.length)return json({status:"provider_error",message:"Public search providers could not be reached."},502);\n const dedup=new Map<string,Candidate>();\n for(const item of searched.results)if(!dedup.has(item.url))dedup.set(item.url,item);\n const results=[...dedup.values()].slice(0,25).map(r=>({query:r.query,title:r.title,url:r.url,snippet:"",source_domain:r.domain,date:r.date}));
+ const searched=await fetchNewsCandidates(queryList,{maxRecords:12,timespan:"7d"});
+ if(!searched.results.length&&searched.errors.length)return json({status:"provider_error",message:"Public search providers could not be reached."},502);
+ const results=searched.results.slice(0,25).map(r=>({query:r.query,title:r.title,url:r.url,snippet:"",source_domain:r.domain,date:r.date}));
  return json({status:"candidates_found",provider,business:{name:business.name,area,niche,services:serviceTerms},queries:queryList,results,count:results.length,attribution:"Data: GDELT Project (https://www.gdeltproject.org/) and/or Google News RSS; links to original publishers.",warning:"Expanded search improves coverage only; public articles are weak signals, not confirmed buyer intent. Review the article, source and relevance before saving. No contacts are scraped and no CRM leads are automatically created."});
 });
