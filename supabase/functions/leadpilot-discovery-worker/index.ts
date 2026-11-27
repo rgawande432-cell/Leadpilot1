@@ -37,7 +37,7 @@ Deno.serve(async(req)=>{
    ]);
    const category=biz.niche||biz.business_type||biz.name,area=cfg.area||biz.location||"India";
    const query='"'+category+'" "'+area+'"';
-   const keywordQueries=(cfg.keywords||[]).filter(Boolean).slice(0,2).flatMap((keyword:string)=>['"'+keyword+'" "'+area+'" "looking for"','"'+keyword+'" "'+area+'" "request quote"']);
+   const keywordQueries=(cfg.keywords||[]).filter(Boolean).slice(0,1).flatMap((keyword:string)=>['"'+keyword+'" "'+area+'" "looking for"','"'+keyword+'" "'+area+'" "request quote"']);
    const searchQueries=[query,...keywordQueries];
    const terms=[biz.niche,biz.business_type,...(biz.services||[]),...(cfg.keywords||[])].filter(Boolean).map((t:string)=>String(t).toLowerCase()).filter((t:string)=>t.length>=3);
    let savedCount=0,articles:any[]=[],provider="none",externalStatus=approved?"connected":"source_disabled",errorText=approved?"":"Free news source disabled or terms review incomplete.";
