@@ -36,7 +36,7 @@ Deno.serve(async(req)=>{
  const configuredKeywords:string[]=(cfg?.keywords||[]).filter(Boolean).slice(0,2);
  const niche=business.niche||business.business_type||business.name,area=body.area||business.location||"India";
  const serviceTerms=(business.services||[]).filter(Boolean).slice(0,4).join(" ")||niche;
- const queryList=[`"${niche}" "${area}"`,`"${serviceTerms}" "${area}"`,`"${niche}" "${area}" "looking for"`,...configuredKeywords.map((k:string)=>`"${k}" "${area}" "looking for"`)].filter((q,i,a)=>a.indexOf(q)===i);
+ const queryList=[`"${niche}" "${area}"`,`"${serviceTerms}" "${area}"`,`"${niche}" "${area}" "looking for"`,`"${serviceTerms}" "${area}" "request quote"`,...configuredKeywords.map((k:string)=>`"${k}" "${area}" "looking for"`)].filter((q,i,a)=>a.indexOf(q)===i);
  const provider="GDELT Project and/or Google News RSS";
  type Candidate={query:string,title:string,url:string,domain:string,date:string};
  const searched=await fetchNewsCandidates(queryList,{maxRecords:12,timespan:"7d"});
