@@ -30,7 +30,7 @@ Facebook/Instagram, Google Business Profile and WhatsApp are not connected. They
 
 ## Deployment
 
-- Frontend: GitHub `main` auto-deploys to the Render static site `leadpilot1-main` at `https://leadpilot1-main.onrender.com`.
+- Frontend: Cloudflare Worker `leadpilot1` is live at `https://leadpilot1.rgawande432.workers.dev/`. Confirm Git-based build/deploy integration before assuming GitHub pushes automatically update this Worker.
 - Supabase Edge Functions deploy separately; the `provider-status` function is deployed independently from the frontend.
 - The custom domain is not changed by this deployment. Verify DNS/alias separately before claiming a custom domain is live.
 - Required optional secrets: `BRAVE_SEARCH_API_KEY` for expanded public-web candidate search and `OPENAI_API_KEY` for real AI content generation. Add them only in Supabase Edge Function Secrets; never commit or paste secrets into chat.
