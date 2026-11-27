@@ -40,6 +40,7 @@ export async function fetchNewsCandidates(queries = [], options = {}) {
   const results = [];
   const providers = new Set();
   const errors = [];
+  const providerSuccesses = new Set();
   let gdeltRateLimited = false;
 
   for (const query of [...new Set(queries.filter(Boolean).map(String))]) {
@@ -57,7 +58,8 @@ export async function fetchNewsCandidates(queries = [], options = {}) {
         if (response.ok) {
           const parsed = parseGdeltResponse(await response.text());
           articles = parsed.articles;
-          if (!articles.length && parsed.fallbackReason) errors.push("GDELT: " + parsed.fallbackReason);
+          if (parsed.fallbackReason) errors.push("GDELT: " + parsed.fallbackReason);
+          else providerSuccesses.add("GDELT Project");
         } else {
           errors.push("GDELT HTTP " + response.status);
           if (response.status === 429) gdeltRateLimited = true;
@@ -78,6 +80,7 @@ export async function fetchNewsCandidates(queries = [], options = {}) {
         const response = await fetcher(rssUrl, { headers: { Accept: "application/rss+xml, application/xml, text/xml" } });
         if (!response.ok) throw new Error("Google News RSS HTTP " + response.status);
         articles = parseGoogleNewsRss(await response.text());
+        providerSuccesses.add("Google News RSS");
         if (articles.length) providers.add("Google News RSS");
       } catch (error) {
         errors.push("Google News RSS: " + (error instanceof Error ? error.message : String(error)));
@@ -93,6 +96,7 @@ export async function fetchNewsCandidates(queries = [], options = {}) {
         const response = await fetcher(endpoint, { headers: { Accept: "application/json" } });
         if (!response.ok) throw new Error("SearXNG HTTP " + response.status);
         const data = await response.json();
+        providerSuccesses.add("SearXNG");
         articles = normalizeExternalResults(data.results, "publishedDate").slice(0, maxRecords);
         if (articles.length) providers.add("SearXNG");
       } catch (error) { errors.push("SearXNG: " + (error instanceof Error ? error.message : String(error))); }
@@ -103,6 +107,7 @@ export async function fetchNewsCandidates(queries = [], options = {}) {
         const response = await fetcher("https://api.tavily.com/search", { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ api_key: options.tavilyApiKey, query, search_depth: "basic", max_results: maxRecords, include_answer: false }) });
         if (!response.ok) throw new Error("Tavily HTTP " + response.status);
         const data = await response.json();
+        providerSuccesses.add("Tavily");
         articles = normalizeExternalResults(data.results, "published_date").slice(0, maxRecords);
         if (articles.length) providers.add("Tavily");
       } catch (error) { errors.push("Tavily: " + (error instanceof Error ? error.message : String(error))); }
@@ -128,5 +133,5 @@ export async function fetchNewsCandidates(queries = [], options = {}) {
 
   const unique = new Map();
   for (const result of results) if (!unique.has(result.url)) unique.set(result.url, result);
-  return { results: [...unique.values()], providers: [...providers], errors };
+  return { results: [...unique.values()], providers: [...providers], providerSuccesses: [...providerSuccesses], errors };
 }
