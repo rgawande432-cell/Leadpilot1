@@ -1,7 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 import { parseGoogleNewsRss } from "../_shared/google-news-rss.js";
-import { parseGdeltResponse } from "../_shared/gdelt-response.js";\nimport { saveDiscoveryCandidates } from "../_shared/discovery-candidate-processing.js";
+import { parseGdeltResponse } from "../_shared/gdelt-response.js";
+import { saveDiscoveryCandidates } from "../_shared/discovery-candidate-processing.js";
 const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type, x-leadpilot-worker-token","Access-Control-Allow-Methods":"POST, OPTIONS"};
 const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...cors,"Content-Type":"application/json"}});
 const clean=(s:string)=>String(s||"").toLowerCase().replace(/\s+/g," ").trim().slice(0,600);
