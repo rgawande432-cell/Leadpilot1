@@ -14,7 +14,7 @@ function canonicalizeUrl(value = "") {
       if (tracking.test(key)) parsed.searchParams.delete(key);
     }
     parsed.hostname = parsed.hostname.toLowerCase();
-    if (parsed.pathname.length > 1) parsed.pathname = parsed.pathname.replace(/\\/+$/, "");
+    if (parsed.pathname.length > 1) parsed.pathname = parsed.pathname.replace(/\/+$/, "");
     return parsed.toString();
   } catch {
     return "";
