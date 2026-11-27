@@ -42,8 +42,8 @@ Deno.serve(async(req)=>{
    let savedCount=0,articles:any[]=[],provider="none",externalStatus=approved?"connected":"source_disabled",errorText=approved?"":"Free news source disabled or terms review incomplete.";
    if(approved){
     try{
-     const search=await fetchNewsCandidates(searchQueries,{maxRecords:20,timespan:"7d"});
-     for(const source of [{key:"gdelt_free_news_search",name:"GDELT Project",prefix:"GDELT"},{key:"google_news_rss",name:"Google News RSS",prefix:"Google News RSS"}]){
+     const search=await fetchNewsCandidates(searchQueries,{maxRecords:20,timespan:"7d",searxngUrl:Deno.env.get("SEARXNG_URL")||""});
+     for(const source of [{key:"gdelt_free_news_search",name:"GDELT Project",prefix:"GDELT"},{key:"google_news_rss",name:"Google News RSS",prefix:"Google News RSS"},{key:"searxng_self_hosted",name:"SearXNG",prefix:"SearXNG"}]){
       const used=search.providers.includes(source.name),failed=search.errors.some((e:string)=>e.startsWith(source.prefix));
       await recordDiscoverySourceHealth({admin,businessId:biz.id,sourceKey:source.key,status:failed?(used?"degraded":"failed"):(used?"healthy":"no_results"),successful:used||!failed,notes:search.errors.filter((e:string)=>e.startsWith(source.prefix)).join("; ")||(!used?"No matching articles in search window":"Provider returned articles")});
      }
