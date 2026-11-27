@@ -22,3 +22,10 @@ test("public intent candidate saving delegates classification to the shared func
   assert.match(snippet, /action:'save'/);
   assert.doesNotMatch(snippet, /intentType|matches=|score=Math\.min/);
 });
+
+test("AI Lead Hunt auto-activation uses hourly scan target and honest contact-data boundaries",()=>{
+  assert.match(html,/scan_interval_hours:1/);
+  assert.match(html,/scan frequency target: every/);
+  assert.match(html,/Contact data is captured only from direct opt-in enquiries or independently verified public contact disclosures/);
+  assert.match(html,/No contact details are fabricated/);
+});
