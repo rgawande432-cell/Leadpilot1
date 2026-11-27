@@ -28,7 +28,7 @@ const normalizeExternalResults = (items = [], dateField = "date") => {
 
 /** Fetch public article candidates with GDELT -> Google News RSS -> optional self-hosted SearXNG fallback.
  * @param {string[]} queries
- * @param {{fetcher?:typeof fetch,maxRecords?:number,timespan?:string,hl?:string,gl?:string,ceid?:string,searxngUrl?:string,tavilyApiKey?:string,googleNewsRssEnabled?:boolean}} options
+ * @param {{fetcher?:typeof fetch,maxRecords?:number,timespan?:string,hl?:string,gl?:string,ceid?:string,searxngUrl?:string,tavilyApiKey?:string,braveApiKey?:string,googleNewsRssEnabled?:boolean}} options
  */
 export async function fetchNewsCandidates(queries = [], options = {}) {
   const fetcher = options.fetcher || fetch;
@@ -70,7 +70,7 @@ export async function fetchNewsCandidates(queries = [], options = {}) {
       }
     }
 
-    if (!articles.length && options.googleNewsRssEnabled !== false) {
+    if (!articles.length && options.braveApiKey) {\n      try {\n        const endpoint = new URL("https://api.search.brave.com/res/v1/web/search");\n        endpoint.searchParams.set("q", query);\n        endpoint.searchParams.set("country", "IN");\n        endpoint.searchParams.set("search_lang", "en");\n        endpoint.searchParams.set("count", String(Math.min(20, maxRecords)));\n        endpoint.searchParams.set("freshness", "pw");\n        endpoint.searchParams.set("result_filter", "web");\n        const response = await fetcher(endpoint, { headers: { Accept: "application/json", "X-Subscription-Token": options.braveApiKey } });\n        if (!response.ok) throw new Error("Brave Search HTTP " + response.status);\n        const data = await response.json();\n        providerSuccesses.add("Brave Search");\n        articles = normalizeExternalResults((data.web?.results || []).map((item) => ({ title: item.title, url: item.url, description: item.description, page_age: item.page_age })), "page_age").slice(0, maxRecords);\n        if (articles.length) providers.add("Brave Search");\n      } catch (error) { errors.push("Brave Search: " + (error instanceof Error ? error.message : String(error))); }\n    }\n\n    if (!articles.length && options.googleNewsRssEnabled !== false) {
       const rssUrl = new URL("https://news.google.com/rss/search");
       rssUrl.searchParams.set("q", query + " when:" + timespan);
       rssUrl.searchParams.set("hl", hl);
