@@ -124,3 +124,17 @@ test("optional provider result normalization ignores malformed and unsafe URLs",
   assert.equal(tavily.results.length, 1);
   assert.equal(tavily.results[0].url, "https://example.net/good");
 });
+
+
+test("Google News RSS fallback is skipped when source approval is disabled", async () => {
+  const calls=[];
+  const fetcher=async(url)=>{
+    calls.push(String(url));
+    return new Response(JSON.stringify({articles:[]}),{status:200});
+  };
+  const result=await fetchNewsCandidates(["buyer query"],{fetcher,googleNewsRssEnabled:false});
+  assert.equal(calls.length,1);
+  assert.match(calls[0],/api\.gdeltproject\.org/);
+  assert.deepEqual(result.results,[]);
+  assert.deepEqual(result.providers,[]);
+});
