@@ -7,14 +7,14 @@ const cors = {
 };
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
-const clean = (value: unknown) => String(value || "").toLowerCase().replace(/\\s+/g, " ").trim().slice(0, 600);
+const clean = (value: unknown) => String(value || "").toLowerCase().replace(/\s+/g, " ").trim().slice(0, 600);
 const xmlDecode = (value: string) => value
-  .replace(/<!\\[CDATA\\[([\\s\\S]*?)\\]\\]>/g, "$1")
+  .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
   .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
   .replace(/&quot;/g, '"').replace(/&#39;/g, "'");
 
 function parseRss(xml: string) {
-  return [...xml.matchAll(/<item\\b[^>]*>([\\s\\S]*?)<\\/item>/gi)].map((match) => {
+  return [...xml.matchAll(/<item\b[^>]*>([\s\S]*?)<\/item>/gi)].map((match) => {
     const block = match[1];
     const field = (tag: string) => xmlDecode(
       (block.match(new RegExp("<" + tag + "[^>]*>([\\s\\S]*?)<\\/" + tag + ">", "i")) || [])[1] || ""
@@ -96,7 +96,6 @@ Deno.serve(async (req) => {
     let provider = "none";
     let externalStatus = sourceApproved ? "connected" : "source_disabled";
     let externalError = sourceApproved ? "" : "Free public-news source is disabled or its terms review is incomplete.";
-    let articles: any[] = [];
     const queries = [baseQuery];
 
     if (sourceApproved) {
@@ -110,6 +109,7 @@ Deno.serve(async (req) => {
         endpoint.searchParams.set("sort", "DateDesc");
         const response = await fetch(endpoint, { headers: { "Accept": "application/json" } });
         let fallbackReason = "";
+        let articles: any[] = [];
         if (response.ok) {
           const raw = await response.text();
           try {
