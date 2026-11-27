@@ -46,7 +46,8 @@ Before any external developer or contractor receives access or contributes code:
 
 - Proprietary repository should be private; access is owner-controlled and granted only to approved contributors.
 - Use protected branches, PR review, least-privilege tokens and secret scanning.
-- Never commit API keys, service-role keys, worker tokens, passwords, customer contact data or secrets.\n- Public-intent prospect contact details are owner-entered only after independent verification, stored owner-scoped, and must not be scraped or published without lawful basis/consent.
+- Never commit API keys, service-role keys, worker tokens, passwords, customer contact data or secrets.
+- Public-intent prospect contact details are owner-entered only after independent verification, stored owner-scoped, and must not be scraped or published without lawful basis/consent.
 - Public release must be an intentional, separately reviewed decision. Public visibility does not mean the source is public-domain or freely licensed, but it materially exposes the proprietary implementation.
 
 ## Pre-launch legal checklist
