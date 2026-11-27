@@ -190,3 +190,20 @@ test("future-dated evidence does not receive a freshness bonus", async () => {
   assert.equal(staleSaved, 1);
   assert.equal(futureAdmin.records[0].payload.score, staleAdmin.records[0].payload.score);
 });
+
+
+test("source health maps no-results and invalid statuses to database-safe values", async () => {
+  const calls=[];
+  const admin={from(table){assert.equal(table,"ai_discovery_source_health");return {
+    select(){return {eq(){return {eq(){return {maybeSingle:async()=>({data:{consecutive_failures:2,last_success_at:null},error:null})}}}}}},
+    upsert(payload){calls.push(payload);return {error:null};}
+  }}};
+  const ok=await recordDiscoverySourceHealth({admin,businessId:"biz-health-status",sourceKey:"gdelt_free_news_search",status:"no_results",successful:true,notes:"empty result set"});
+  const bad=await recordDiscoverySourceHealth({admin,businessId:"biz-health-status",sourceKey:"gdelt_free_news_search",status:"unexpected_status",successful:false,notes:"provider check"});
+  assert.equal(ok,true);assert.equal(bad,true);
+  assert.equal(calls[0].status,"healthy");
+  assert.match(calls[0].notes,/No results returned/);
+  assert.equal(calls[0].consecutive_failures,0);
+  assert.equal(calls[1].status,"not_connected");
+  assert.equal(calls[1].consecutive_failures,2);
+});
