@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-import { fetchNewsCandidates } from "../_shared/news-search-provider.js";\nimport { saveDiscoveryCandidates } from "../_shared/discovery-candidate-processing.js";
+import { fetchNewsCandidates } from "../_shared/news-search-provider.js";
+import { saveDiscoveryCandidates } from "../_shared/discovery-candidate-processing.js";
 const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type","Access-Control-Allow-Methods":"POST, OPTIONS"};
 const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...cors,"Content-Type":"application/json"}});
 
