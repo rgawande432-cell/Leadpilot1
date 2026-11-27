@@ -23,7 +23,7 @@ export async function fetchNewsCandidates(queries = [], options = {}) {
   const ceid = options.ceid || "IN:en";
   const results = [];
   const providers = new Set();
-  const errors = [];
+  const errors = [];\n  let gdeltRateLimited = false;
 
   for (const query of [...new Set(queries.filter(Boolean).map(String))]) {
     let articles = [];
