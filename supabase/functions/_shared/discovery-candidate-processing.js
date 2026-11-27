@@ -33,7 +33,9 @@ function freshnessBonus(value = "") {
     date = new Date(raw.slice(0, 4) + "-" + raw.slice(4, 6) + "-" + raw.slice(6, 8) + "T00:00:00Z");
   }
   if (!Number.isFinite(date.getTime())) return 0;
-  const ageDays = Math.max(0, (Date.now() - date.getTime()) / 86400000);
+  const ageDays = (Date.now() - date.getTime()) / 86400000;
+  // Future-dated evidence should never receive a freshness boost.
+  if (ageDays < 0) return 0;
   if (ageDays <= 3) return 10;
   if (ageDays <= 14) return 5;
   return 0;
