@@ -7,6 +7,20 @@ const EXCLUDED = /(job opening|hiring|career|launch(ed)?|new product|review|awar
 const EXPLICIT = /(looking for|need a|need an|need to buy|want to buy|want to purchase|buying|purchase|hire|quote|quotation|price for|request for|seeking|can you supply|where can i buy|who can provide|available for)/i;
 const QUESTION = /(which|where|recommend|suggest|anyone know|how much|best|options|can anyone|who provides)/i;
 
+function freshnessBonus(value = "") {
+  const raw = String(value || "").trim();
+  if (!raw) return 0;
+  let date = new Date(raw);
+  if (!Number.isFinite(date.getTime()) && /^\d{8}$/.test(raw)) {
+    date = new Date(raw.slice(0, 4) + "-" + raw.slice(4, 6) + "-" + raw.slice(6, 8) + "T00:00:00Z");
+  }
+  if (!Number.isFinite(date.getTime())) return 0;
+  const ageDays = Math.max(0, (Date.now() - date.getTime()) / 86400000);
+  if (ageDays <= 3) return 10;
+  if (ageDays <= 14) return 5;
+  return 0;
+}
+
 /** @param {any} candidate @param {string} mode */
 function classifyCandidate(candidate, mode) {
   const title = String(candidate.title || "");
@@ -46,7 +60,8 @@ export async function saveDiscoveryCandidates({
     const base = intent === "explicit" ? (mode === "title_explicit" ? 38 : 55) : 40;
     const perMatch = mode === "title_explicit" ? 5 : 8;
     const cap = mode === "title_explicit" ? 60 : 100;
-    const score = Math.min(cap, base + Math.min(mode === "title_explicit" ? 16 : 24, matches.length * perMatch));
+    const recency = freshnessBonus(candidate.date || candidate.published_date || candidate.publishedDate);
+    const score = Math.min(cap, base + Math.min(mode === "title_explicit" ? 16 : 24, matches.length * perMatch) + recency);
     const payload = {
       business_id: businessId,
       run_id: runId || null,
