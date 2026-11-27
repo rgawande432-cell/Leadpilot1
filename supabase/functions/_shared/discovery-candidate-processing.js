@@ -1,12 +1,14 @@
 // Shared discovery candidate filtering, intent classification, deduplication and persistence.
 // Provider adapters (Brave, GDELT, Google News RSS) remain separate; signal policy is canonical here.
-/** @param {any} value */\nconst normalize = (value = "") => String(value || "").toLowerCase().replace(/\s+/g, " ").trim().slice(0, 600);
+/** @param {any} value */
+const normalize = (value = "") => String(value || "").toLowerCase().replace(/\s+/g, " ").trim().slice(0, 600);
 
 const EXCLUDED = /(job opening|hiring|career|launch(ed)?|new product|review|award|festival|event|stock market|funding|investment|company profile)/i;
 const EXPLICIT = /(looking for|need a|need an|need to buy|want to buy|want to purchase|buying|purchase|hire|quote|quotation|price for|request for|seeking|can you supply|where can i buy|who can provide|available for)/i;
 const QUESTION = /(which|where|recommend|suggest|anyone know|how much|best|options|can anyone|who provides)/i;
 
-/** @param {any} candidate @param {string} mode */\nfunction classifyCandidate(candidate, mode) {
+/** @param {any} candidate @param {string} mode */
+function classifyCandidate(candidate, mode) {
   const title = String(candidate.title || "");
   const text = (title + " " + String(candidate.snippet || "")).trim();
   if (EXCLUDED.test(title)) return null;
@@ -16,13 +18,15 @@ const QUESTION = /(which|where|recommend|suggest|anyone know|how much|best|optio
   return null;
 }
 
-/** @param {string} text @param {string[]} terms */\nfunction getTermMatches(text, terms = []) {
+/** @param {string} text @param {string[]} terms */
+function getTermMatches(text, terms = []) {
   const normalized = normalize(text);
   return [...new Set(terms.filter(Boolean).map(t => String(t).toLowerCase().trim()).filter(t => t.length >= 3))]
     .filter(term => normalized.includes(term));
 }
 
-/** @param {{admin:any,businessId:string,runId:string,candidates?:any[],terms?:string[],mode?:string,sourceName?:string,maxCandidates?:number}} options */\nexport async function saveDiscoveryCandidates({
+/** @param {{admin:any,businessId:string,runId:string,candidates?:any[],terms?:string[],mode?:string,sourceName?:string,maxCandidates?:number}} options */
+export async function saveDiscoveryCandidates({
   admin, businessId, runId, candidates = [], terms = [], mode = "text_intent",
   sourceName = "Public search", maxCandidates = 25
 }) {
