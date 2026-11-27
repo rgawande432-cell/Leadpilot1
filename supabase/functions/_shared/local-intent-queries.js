@@ -13,8 +13,8 @@ export function buildLocalIntentQueries({ niche, businessType, businessName, ser
     `"${category}" "${location}"`,
     `"${service}" "${location}" "looking for"`,
     `"${service}" "${location}" "need"`,
-    `"${category}" "${location}" "request quote"`,
-    ...keywordList.flatMap((keyword) => [
+    ...(keywordList.length ? [`"${keywordList[0]}" "${location}" "looking for"`] : [`"${category}" "${location}" "request quote"`]),
+    ...keywordList.slice(1).flatMap((keyword) => [
       `"${keyword}" "${location}" "looking for"`,
       `"${keyword}" "${location}" "request quote"`
     ])
