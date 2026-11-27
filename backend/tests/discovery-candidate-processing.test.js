@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { saveDiscoveryCandidates } from "../../supabase/functions/_shared/discovery-candidate-processing.js";
+import { saveDiscoveryCandidates, recordDiscoverySourceHealth } from "../../supabase/functions/_shared/discovery-candidate-processing.js";
 
 function mockAdmin() {
   const records = [];
@@ -105,4 +105,19 @@ test("keyword matching uses token boundaries and punctuation normalization", asy
   });
   assert.equal(saved, 0);
   assert.equal(admin.records.length, 0);
+});
+
+test("provider health upsert resets failures on success and keeps disabled sources from incrementing", async () => {
+  const calls=[];
+  const admin={from(table){assert.equal(table,"ai_discovery_source_health");return {
+    select(){return {eq(){return {eq(){return {maybeSingle:async()=>({data:{consecutive_failures:3,last_success_at:"2026-11-01T00:00:00Z"}})}}}}}},
+    upsert(payload,options){calls.push({payload,options});return {error:null};}
+  }}};
+  const ok=await recordDiscoverySourceHealth({admin,businessId:"biz-health",sourceKey:"gdelt_free_news_search",status:"healthy",successful:true,notes:"found results"});
+  const disabled=await recordDiscoverySourceHealth({admin,businessId:"biz-health",sourceKey:"brave_public_web_search",status:"disabled",successful:false,notes:"missing key"});
+  assert.equal(ok,true);assert.equal(disabled,true);
+  assert.equal(calls[0].payload.consecutive_failures,0);
+  assert.equal(calls[0].payload.last_success_at,calls[0].payload.last_checked_at);
+  assert.equal(calls[1].payload.consecutive_failures,3);
+  assert.equal(calls[1].payload.last_success_at,"2026-11-01T00:00:00Z");
 });
