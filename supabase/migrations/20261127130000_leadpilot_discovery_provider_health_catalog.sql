@@ -3,6 +3,8 @@
 insert into public.ai_discovery_sources
   (source_key, display_name, source_type, enabled, requires_credentials, terms_reviewed, description, updated_at)
 values
+  ('brave_public_web_search', 'Brave public web search API', 'approved_api', false, true, false,
+   'Optional public-web search API for buyer-intent candidates. Requires API key and source terms review. Candidate discovery only; no private contact scraping.', now()),
   ('google_news_rss', 'Google News RSS fallback', 'approved_api', false, false, false,
    'Public news RSS fallback used only after source approval. No API key required.', now()),
   ('searxng_self_hosted', 'SearXNG self-hosted search', 'approved_api', false, true, false,
