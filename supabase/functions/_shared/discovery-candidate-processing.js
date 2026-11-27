@@ -50,7 +50,7 @@ export async function saveDiscoveryCandidates({
       source_url: candidate.url,
       evidence: evidence.slice(0, 1800),
       intent_type: intent,
-      signal_date: String(candidate.date || new Date().toISOString().slice(0, 10)).slice(0, 10),
+      signal_date: new Date().toISOString().slice(0, 10),
       score,
       verification_status: "pending",
       dedupe_key: normalize(candidate.url + "|" + (candidate.title || candidate.snippet || "")).slice(0, 500)
