@@ -42,5 +42,6 @@ test("public search provider health records distinguish disabled, success and no
   assert.ok(search.includes('succeeded?(used?"healthy":"no_results"):"not_connected'));
   assert.ok(search.includes("successful:source.approved&&succeeded"));
   assert.ok(search.includes("healthAdmin=service?createClient(url,service):client"));
-  assert.ok(search.includes("provider_health_warnings:healthWarnings"));\n  assert.ok(worker.includes('succeeded?(used?"healthy":"no_results"):"not_connected"'));
+  assert.ok(search.includes("provider_health_warnings:healthWarnings"));
+  assert.ok(worker.includes('succeeded?(used?"healthy":"no_results"):"not_connected"'));
 });
