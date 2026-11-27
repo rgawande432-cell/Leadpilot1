@@ -35,7 +35,7 @@ Deno.serve(async(req)=>{
  const {data:braveSource}=await admin.from("ai_discovery_sources").select("enabled,terms_reviewed").eq("source_key","brave_public_web_search").maybeSingle();
  const braveApproved=!!braveSource?.enabled&&!!braveSource?.terms_reviewed;
  let candidates=0,externalStatus=apiKey?(braveApproved?"connected":"source_disabled"):"disconnected",externalError=apiKey&&!braveApproved?"Brave source is disabled or terms review is incomplete.":"",searchQueries:string[]=[];
- if(!apiKey||!braveApproved)await recordDiscoverySourceHealth({admin,businessId,sourceKey:"brave_public_web_search",status:"disabled",successful:true,notes:!apiKey?"Brave API key not configured":"Brave source disabled or terms not reviewed"});
+ if(!apiKey||!braveApproved)await recordDiscoverySourceHealth({admin,businessId,sourceKey:"brave_public_web_search",status:"disabled",successful:false,notes:!apiKey?"Brave API key not configured":"Brave source disabled or terms not reviewed"});
  if(apiKey&&braveApproved){
   const niche=business.niche||business.business_type||business.name,area=cfg.area||business.location||"India",services=(business.services||[]).slice(0,4).join(" ")||niche;
   searchQueries=[`"${niche}" looking for ${area}`,`need ${services} near ${area}`,`"${niche}" price quote ${area}`,...(cfg.keywords||[]).filter(Boolean).slice(0,2).map((keyword:string)=>`"${keyword}" "${area}" looking for`)];
