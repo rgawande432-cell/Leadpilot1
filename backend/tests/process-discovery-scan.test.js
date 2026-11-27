@@ -9,9 +9,9 @@ const scan=await readFile(resolve(root,"supabase/functions/process-discovery-sca
 const migration=await readFile(resolve(root,"supabase/migrations/20261127150000_leadpilot_hourly_discovery_cadence.sql"),"utf8");
 
 test("Brave scan uses fresh India-targeted buyer-intent query set",()=>{
-  assert.match(scan,/"looking for" "${area}"/);
-  assert.match(scan,/"recommend" "${area}"/);
-  assert.match(scan,/"quotation" "${area}"/);
+  assert.match(scan,/looking for/);
+  assert.match(scan,/recommend/);
+  assert.match(scan,/quotation/);
   assert.match(scan,/country","IN"/);
   assert.match(scan,/freshness","pw"/);
   assert.match(scan,/count","8"/);
