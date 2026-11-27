@@ -4,7 +4,7 @@ const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"au
 const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...cors,"Content-Type":"application/json"}});
 const clean=(s:string)=>String(s||"").toLowerCase().replace(/\s+/g," ").trim().slice(0,600);
 const xmlDecode=(s:string)=>s.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g,"$1").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#39;/g,"'");
-const parseRss=(xml:string)=>[...xml.matchAll(/<item\b[^>]*>([\s\S]*?)<\/item>/gi)].map(m=>{const text=m[1];const field=(tag:string)=>xmlDecode((text.match(new RegExp("<"+tag+"[^>]*>([\\s\\S]*?)<\\/"+tag+">","i"))||[])[1]||"").trim();return {title:field("title"),url:field("link"),date:field("pubDate"),domain:"Google News RSS"};}).filter(x=>x.title&&x.url);
+const parseRss=(xml:string)=>[...xml.matchAll(/<item\b[^>]*>([\s\S]*?)<\/item>/gi)].map(m=>{const text=m[1];const field=(tag:string)=>xmlDecode((text.match(new RegExp("<"+tag+"[^>]*>([\\s\\S]*?)<\\/"+tag+">","i"))||[])[1]||"").trim();return {title:field("title"),url:field("link"),date:field("pubDate"),description:field("description"),domain:"Google News RSS"};}).filter(x=>x.title&&x.url);
 Deno.serve(async(req)=>{
  if(req.method==="OPTIONS")return new Response("ok",{headers:cors});
  if(req.method!=="POST")return json({error:"POST required"},405);
@@ -51,13 +51,20 @@ Deno.serve(async(req)=>{
      }else if(response.status===429||response.status>=500)fallbackReason="GDELT HTTP "+response.status;
      else throw new Error("GDELT HTTP "+response.status);
      if(fallbackReason||!articles.length){
-      const rssUrl=new URL("https://news.google.com/rss/search");rssUrl.searchParams.set("q",query+" when:7d");rssUrl.searchParams.set("hl","en-IN");rssUrl.searchParams.set("gl","IN");rssUrl.searchParams.set("ceid","IN:en");
-      const rss=await fetch(rssUrl,{headers:{"Accept":"application/rss+xml, application/xml, text/xml"}});
-      if(!rss.ok)throw new Error((fallbackReason||"GDELT returned no articles")+"; Google News RSS "+rss.status);
-      articles=parseRss(await rss.text());provider="Google News RSS fallback";
+      const searchTerms=[...new Set([category,...(biz.services||[]),...(cfg.keywords||[])].filter(Boolean).map((t:string)=>String(t).trim()).filter((t:string)=>t.length>=3))].slice(0,4);
+      const rssQueries=[...new Set([query,...searchTerms.map((t:string)=>'"'+t+'" "'+area+'"'),...searchTerms.slice(0,2).map((t:string)=>'"'+t+'" ('+'looking for OR need OR quote OR recommend'+') "'+area+'"')])].slice(0,5);
+      const rssArticles:any[]=[];
+      for(const rssQuery of rssQueries){
+       const rssUrl=new URL("https://news.google.com/rss/search");rssUrl.searchParams.set("q",rssQuery+" when:7d");rssUrl.searchParams.set("hl","en-IN");rssUrl.searchParams.set("gl","IN");rssUrl.searchParams.set("ceid","IN:en");
+       const rss=await fetch(rssUrl,{headers:{"Accept":"application/rss+xml, application/xml, text/xml"}});
+       if(!rss.ok)continue;
+       rssArticles.push(...parseRss(await rss.text()));
+      }
+      if(!rssArticles.length)throw new Error((fallbackReason||"GDELT returned no articles")+"; Google News RSS returned no results");
+      articles=rssArticles;provider="Google News RSS fallback";
      }
      for(const result of [...new Map(articles.filter((x:any)=>x.url).map((x:any)=>[x.url,x])).values()].slice(0,20)){
-      const evidence=(result.title+" — "+result.domain+" — "+result.date).slice(0,1800),txt=clean(evidence);
+      const evidence=(result.title+" — "+(result.description||"")+" — "+result.domain+" — "+result.date).slice(0,1800),txt=clean(evidence);
       const intent=/(looking for|need a|need an|want to buy|buying|purchase|hire|quote|quotation|price for|available for|request for|seeking)/i.test(txt)?"explicit":/(which|where|recommend|suggest|anyone know|how much|best|options|can anyone|who provides)/i.test(txt)?"question":"research";
       if(intent==="research")continue;
       const matches=[...new Set(terms)].filter((t:string)=>txt.includes(t));
