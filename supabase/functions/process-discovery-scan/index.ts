@@ -38,11 +38,11 @@ Deno.serve(async(req)=>{
  if(!apiKey||!braveApproved)await recordDiscoverySourceHealth({admin,businessId,sourceKey:"brave_public_web_search",status:"disabled",successful:false,notes:!apiKey?"Brave API key not configured":"Brave source disabled or terms not reviewed"});
  if(apiKey&&braveApproved){
   const niche=business.niche||business.business_type||business.name,area=cfg.area||business.location||"India",services=(business.services||[]).slice(0,4).join(" ")||niche;
-  searchQueries=[`"${niche}" looking for ${area}`,`need ${services} near ${area}`,`"${niche}" price quote ${area}`,...(cfg.keywords||[]).filter(Boolean).slice(0,2).map((keyword:string)=>`"${keyword}" "${area}" looking for`)];
+  searchQueries=[`"${niche}" "looking for" "${area}"`,`"${services}" "need" "${area}"`,`"${niche}" "recommend" "${area}"`,`"${niche}" "quotation" "${area}"`,`"${niche}" "where can I buy" "${area}`,...(cfg.keywords||[]).filter(Boolean).slice(0,1).map((keyword:string)=>`"${keyword}" "${area}" "looking for"`)].slice(0,6);
   const results=[];
   try{
    for(const q of searchQueries){
-    const endpoint=new URL("https://api.search.brave.com/res/v1/web/search");endpoint.searchParams.set("q",q);endpoint.searchParams.set("country","IN");endpoint.searchParams.set("search_lang","en");endpoint.searchParams.set("count","5");endpoint.searchParams.set("freshness","pm");
+    const endpoint=new URL("https://api.search.brave.com/res/v1/web/search");endpoint.searchParams.set("q",q);endpoint.searchParams.set("country","IN");endpoint.searchParams.set("search_lang","en");endpoint.searchParams.set("count","8");endpoint.searchParams.set("freshness","pw");endpoint.searchParams.set("result_filter","web");
     const response=await fetch(endpoint,{headers:{"Accept":"application/json","X-Subscription-Token":apiKey}});
     if(!response.ok)throw new Error("Brave search HTTP "+response.status);
     const data=await response.json();for(const item of (data.web?.results||[])){try{const parsed=new URL(item.url);if(!["http:","https:"].includes(parsed.protocol))continue;results.push({query:q,title:item.title||"",url:parsed.href,snippet:item.description||""});}catch{continue;}}
