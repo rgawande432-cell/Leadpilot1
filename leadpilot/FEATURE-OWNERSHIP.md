@@ -35,7 +35,7 @@ This document is the development guardrail: **upgrade the canonical feature inst
 - [x] Legacy lead capture validation delegates to canonical validation.
 - [x] Legacy duplicate check delegates to canonical business-scoped dedupe.
 - [x] Added regression tests for these consolidations.
-- [x] Consolidated common discovery candidate filtering, intent classification, term matching, scoring, dedupe and pending-signal persistence into one shared processor; scheduled worker, owner-triggered scan, and public search manual-save flow use it.\n- [x] Removed duplicated client-side candidate classification/scoring from public search save UI; saving now invokes the canonical processor and configured discovery keywords.
+- [x] Consolidated common discovery candidate filtering, intent classification, term matching, scoring, dedupe and pending-signal persistence into one shared processor; scheduled worker, owner-triggered scan, and public search manual-save flow use it.\n- [x] Removed duplicated client-side candidate classification/scoring from public search save UI; saving now invokes the canonical processor and configured discovery keywords. Keyword matching normalizes punctuation and uses token boundaries to reduce accidental substring matches.
 - [ ] Complete full UI/API/DB ownership audit and review all disconnected phase modules before future feature additions.
 - [x] Latest CI for the discovery consolidation head passed backend lead-processing tests, Phase 40–43 regressions, and inline JS/Supabase function validation. Earlier transient failure was corrected and rerun successfully.
 
