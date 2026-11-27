@@ -30,9 +30,10 @@ Facebook/Instagram, Google Business Profile and WhatsApp are not connected. They
 
 ## Deployment
 
-- Frontend: GitHub `main` auto-deploys to Vercel project `leadpilot1`.
-- Supabase Edge Functions deploy separately.
-- Domain DNS/alias must be verified in Vercel and Hostinger; deployment READY alone does not prove domain propagation.
+- Frontend: GitHub `main` auto-deploys to the Render static site `leadpilot1-main` at `https://leadpilot1-main.onrender.com`.
+- Supabase Edge Functions deploy separately; the `provider-status` function is deployed independently from the frontend.
+- The custom domain is not changed by this deployment. Verify DNS/alias separately before claiming a custom domain is live.
+- Required optional secrets: `BRAVE_SEARCH_API_KEY` for expanded public-web candidate search and `OPENAI_API_KEY` for real AI content generation. Add them only in Supabase Edge Function Secrets; never commit or paste secrets into chat.
 
 ## Integrity
 
