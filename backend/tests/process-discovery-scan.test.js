@@ -7,6 +7,7 @@ import { dirname, resolve } from "node:path";
 const root=resolve(dirname(fileURLToPath(import.meta.url)),"../..");
 const scan=await readFile(resolve(root,"supabase/functions/process-discovery-scan/index.ts"),"utf8");
 const migration=await readFile(resolve(root,"supabase/migrations/20261127150000_leadpilot_hourly_discovery_cadence.sql"),"utf8");
+const providerCatalog=await readFile(resolve(root,"supabase/migrations/20261127130000_leadpilot_discovery_provider_health_catalog.sql"),"utf8");
 
 test("Brave scan uses fresh India-targeted buyer-intent query set",()=>{
   assert.match(scan,/looking for/);
@@ -36,4 +37,10 @@ test("hourly cadence migration updates only active configurations",()=>{
   assert.match(migration,/scan_interval_hours = 1/);
   assert.match(migration,/where status = 'active'/);
   assert.match(migration,/scan_interval_hours > 1/);
+});
+
+test("Brave provider catalog remains disabled until terms and credentials are approved",()=>{
+  assert.match(providerCatalog,/brave_public_web_search/);
+  assert.match(providerCatalog,/false, true, false/);
+  assert.match(providerCatalog,/no private contact scraping/);
 });
