@@ -1,7 +1,25 @@
 // Shared discovery candidate filtering, intent classification, deduplication and persistence.
 // Provider adapters (Brave, GDELT, Google News RSS) remain separate; signal policy is canonical here.
 /** @param {any} value */
-const normalize = (value = "") => String(value || "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").replace(/\s+/g, " ").trim().slice(0, 600);
+const normalize = (value = "") => String(value || "").toLowerCase().replace(/[^\\p{L}\\p{N}]+/gu, " ").replace(/\\s+/g, " ").trim().slice(0, 600);
+
+/** Canonicalize common tracking variants so one public post/article is not saved repeatedly. */
+function canonicalizeUrl(value = "") {
+  try {
+    const parsed = new URL(String(value || "").trim());
+    if (!["http:", "https:"].includes(parsed.protocol)) return "";
+    parsed.hash = "";
+    const tracking = /^(utm_[^=]+|fbclid|gclid|dclid|mc_cid|mc_eid|ref|source)$/i;
+    for (const key of [...parsed.searchParams.keys()]) {
+      if (tracking.test(key)) parsed.searchParams.delete(key);
+    }
+    parsed.hostname = parsed.hostname.toLowerCase();
+    if (parsed.pathname.length > 1) parsed.pathname = parsed.pathname.replace(/\\/+$/, "");
+    return parsed.toString();
+  } catch {
+    return "";
+  }
+}
 
 const EXCLUDED = /(job opening|hiring|career|launch(ed)?|new product|review|award|festival|event|stock market|funding|investment|company profile)/i;
 const EXPLICIT = /(looking for|need a|need an|need to buy|want to buy|want to purchase|buying|purchase|hire|quote|quotation|price for|request for|seeking|can you supply|where can i buy|who can provide|available for)/i;
@@ -11,7 +29,7 @@ function freshnessBonus(value = "") {
   const raw = String(value || "").trim();
   if (!raw) return 0;
   let date = new Date(raw);
-  if (!Number.isFinite(date.getTime()) && /^\d{8}$/.test(raw)) {
+  if (!Number.isFinite(date.getTime()) && /^\\d{8}$/.test(raw)) {
     date = new Date(raw.slice(0, 4) + "-" + raw.slice(4, 6) + "-" + raw.slice(6, 8) + "T00:00:00Z");
   }
   if (!Number.isFinite(date.getTime())) return 0;
@@ -46,12 +64,13 @@ export async function saveDiscoveryCandidates({
 }) {
   const unique = new Map();
   for (const candidate of candidates) {
-    const url = String(candidate.url || candidate.source_url || "").trim();
-    if (!url || !/^https?:\/\//i.test(url)) continue;
-    if (!unique.has(url)) unique.set(url, { ...candidate, url });
+    const url = canonicalizeUrl(candidate.url || candidate.source_url || "");
+    if (!url || unique.has(url)) continue;
+    unique.set(url, { ...candidate, url });
   }
+  const boundedMax = Math.max(0, Math.min(100, Math.floor(Number(maxCandidates) || 0)));
   let savedCount = 0;
-  for (const candidate of [...unique.values()].slice(0, maxCandidates)) {
+  for (const candidate of [...unique.values()].slice(0, boundedMax)) {
     const intent = classifyCandidate(candidate, mode);
     if (!intent) continue;
     const evidence = (String(candidate.title || "") + (candidate.domain ? " — " + candidate.domain : "") + (candidate.date ? " — " + candidate.date : "") + (candidate.snippet ? " — " + candidate.snippet : "")).slice(0, 2000);
