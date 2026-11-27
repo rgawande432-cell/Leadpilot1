@@ -115,3 +115,9 @@ This document is the development guardrail: **upgrade the canonical feature inst
 - Scheduled discovery worker query set now includes configured keyword + area + buyer request phrases rather than generic keyword-only searches; capped configured terms keep the scheduled provider call count bounded.
 - Provider limitations remain: the enabled free-news search is article/news oriented, not a direct scan of social/community posts. GDELT has returned HTTP 429/unexpected responses and recent RSS runs produced no candidates. No external search API credentials are configured in the source catalog; Brave search remains disabled.
 - Security advisories reviewed: leaked-password protection disabled (recommend enabling); two owner-checked SECURITY DEFINER RPCs flagged as warnings; no change made because ownership guards are in place and permission tightening needs impact review. Unused indexes are informational; no production index deletion performed.
+
+## Provider health telemetry implementation (2026-11-27)
+
+- Canonical shared helper now upserts per-business/per-provider health into `ai_discovery_source_health`, tracks last check/success, status, notes and consecutive failures.
+- Public-news search and scheduled worker record GDELT and Google News RSS outcomes; manual Brave scans record disabled/healthy/failed states without treating disabled credentials as failures.
+- Regression test added for failure-count reset on success and no increment when source is disabled.
