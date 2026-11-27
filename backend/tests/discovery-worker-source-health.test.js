@@ -18,3 +18,9 @@ test("worker gates optional search providers by source approval and credentials"
   assert.match(worker,/searxngApproved\?\(Deno\.env\.get\("SEARXNG_URL"\)/);
   assert.match(worker,/tavilyApproved\?\(Deno\.env\.get\("TAVILY_API_KEY"\)/);
 });
+
+
+test("empty but successful fallback providers do not fail the scheduled scan",()=>{
+  assert.match(worker,/providerSuccesses\.length/);
+  assert.match(worker,/externalStatus=search\.errors\.length\?"degraded":"connected"/);
+});
