@@ -42,10 +42,10 @@ Deno.serve(async(req)=>{
   const results=[];let successfulRequests=0;
   try{
    for(const q of searchQueries){
-    const endpoint=new URL("https://api.search.brave.com/res/v1/web/search");endpoint.searchParams.set("q",q);endpoint.searchParams.set("country","IN");endpoint.searchParams.set("search_lang","en");endpoint.searchParams.set("count","8");endpoint.searchParams.set("freshness","pw");endpoint.searchParams.set("result_filter","web");
+    const endpoint=new URL("https://api.search.brave.com/res/v1/web/search");endpoint.searchParams.set("q",q);endpoint.searchParams.set("country","IN");endpoint.searchParams.set("search_lang","en");endpoint.searchParams.set("count","8");endpoint.searchParams.set("freshness","pw");endpoint.searchParams.set("result_filter","web,discussions");
     const response=await fetch(endpoint,{headers:{"Accept":"application/json","X-Subscription-Token":apiKey}});
     if(!response.ok)throw new Error("Brave search HTTP "+response.status);
-    successfulRequests++;const data=await response.json();for(const item of (data.web?.results||[])){try{const parsed=new URL(item.url);if(!["http:","https:"].includes(parsed.protocol))continue;results.push({query:q,title:item.title||"",url:parsed.href,snippet:item.description||""});}catch{continue;}}
+    successfulRequests++;const data=await response.json();for(const item of [...(data.web?.results||[]),...(data.discussions?.results||[])]){try{const parsed=new URL(item.url);if(!["http:","https:"].includes(parsed.protocol))continue;results.push({query:q,title:item.title||"",url:parsed.href,snippet:item.description||item.snippet||""});}catch{continue;}}
    }
    const terms=[business.niche,business.business_type,...(business.services||[]),...(cfg.keywords||[])].filter(Boolean);
    candidates=await saveDiscoveryCandidates({admin,businessId,runId:run.id,candidates:results,terms,mode:"text_intent",sourceName:"Brave Search",maxCandidates:25});
