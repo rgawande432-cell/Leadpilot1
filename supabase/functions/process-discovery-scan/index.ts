@@ -38,7 +38,7 @@ Deno.serve(async(req)=>{
  if(!apiKey||!braveApproved)await recordDiscoverySourceHealth({admin,businessId,sourceKey:"brave_public_web_search",status:"disabled",successful:false,notes:!apiKey?"Brave API key not configured":"Brave source disabled or terms not reviewed"});
  if(apiKey&&braveApproved){
   const niche=business.niche||business.business_type||business.name,area=cfg.area||business.location||"India",services=(business.services||[]).slice(0,4).join(" ")||niche;
-  searchQueries=[`"${niche}" "looking for" "${area}"`,`"${services}" "need" "${area}"`,`"${niche}" "recommend" "${area}"`,`"${niche}" "quotation" "${area}"`,`"${niche}" "where can I buy" "${area}"`,...(cfg.keywords||[]).filter(Boolean).slice(0,1).map((keyword:string)=>`"${keyword}" "${area}" "looking for"`)].slice(0,6);
+  searchQueries=[`"${niche}" "looking for" "${area}"`,`"${services}" "need" "${area}"`,`"${niche}" "recommend" "${area}"`,...(cfg.keywords||[]).filter(Boolean).slice(0,1).map((keyword:string)=>`"${keyword}" "${area}" "request quote"`)].slice(0,4);
   const results=[];let successfulRequests=0;
   try{
    for(const q of searchQueries){
