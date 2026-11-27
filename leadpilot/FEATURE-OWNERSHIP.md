@@ -39,6 +39,24 @@ This document is the development guardrail: **upgrade the canonical feature inst
 - [ ] Complete full UI/API/DB ownership audit and review all disconnected phase modules before future feature additions.
 - [x] Latest CI for the discovery consolidation head passed backend lead-processing tests, Phase 40–43 regressions, and inline JS/Supabase function validation. Earlier transient failure was corrected and rerun successfully.
 
+## Live UI/API/database ownership map (audited 2026-11-27)
+
+| UI capability | Canonical API/data owner | Status/notes |
+|---|---|---|
+| Business profile | `businesses` table, owner-scoped CRUD | Live |
+| Public enquiry form | `submit-lead` Edge Function → `leads`, notification triggers | Live; consent, validation, spam/duplicate controls |
+| CRM | `leads` table, owner-scoped updates | Live |
+| Dashboard/analytics | Derived from real `leads` records | Live; no synthetic lead counts |
+| AI discovery activation and queue | `ai_discovery_configs`, `ai_discovery_jobs`, `ai_discovery_runs` | Live scheduler; source reliability currently limited |
+| Public intent search and review | `public-intent-search` + shared candidate processor + `ai_discovery_signals` | Search candidate → owner review; no contact scraping |
+| Verified public prospects | `leadpilot_public_prospects` + `save_verified_intent_as_prospect` RPC | Contact data is not auto-invented |
+| Content Studio | `content-generation` Edge Function + `leadpilot_content_drafts` | AI requires provider key; templates remain available |
+| Campaign Planner | `leadpilot_campaign_drafts` | Persisted in database; copy corrected |
+| Follow-up Planner | `leadpilot_followups` + reminder cron/notifications | Live |
+| Notifications | `leadpilot_notifications` | Live |
+| Source Connections | `provider-status` + `ai_discovery_sources` | Status only; external connections need credentials/permissions |
+| Public business directory | `public-business-search` + opt-in fields on `businesses` | Owner opt-in required |
+
 ## Required workflow for future changes
 
 1. Search this ownership map, code, API routes, database tables, and UI before creating a feature.
