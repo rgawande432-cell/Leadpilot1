@@ -24,7 +24,9 @@ Deno.serve(async(req)=>{
  const approved=isApproved("gdelt_free_news_search");
  const rssApproved=isApproved("google_news_rss");
  const searxngApproved=isApproved("searxng_self_hosted")&&!!Deno.env.get("SEARXNG_URL");
- const tavilyApproved=isApproved("tavily_search")&&!!Deno.env.get("TAVILY_API_KEY");\n const braveApproved=isApproved("brave_public_web_search")&&!!Deno.env.get("BRAVE_SEARCH_API_KEY");\n const anySearchApproved=approved||rssApproved||searxngApproved||tavilyApproved||braveApproved;
+ const tavilyApproved=isApproved("tavily_search")&&!!Deno.env.get("TAVILY_API_KEY");
+ const braveApproved=isApproved("brave_public_web_search")&&!!Deno.env.get("BRAVE_SEARCH_API_KEY");
+ const anySearchApproved=approved||rssApproved||searxngApproved||tavilyApproved||braveApproved;
  const claim=await admin.rpc("claim_leadpilot_discovery_jobs",{p_limit:1});
  if(claim.error)return json({error:claim.error.message},500);
  const jobs=claim.data||[],reports=[];
@@ -50,7 +52,8 @@ Deno.serve(async(req)=>{
     try{
      const search=await fetchNewsCandidates(searchQueries,{maxRecords:20,timespan:"7d",googleNewsRssEnabled:rssApproved,searxngUrl:searxngApproved?(Deno.env.get("SEARXNG_URL")||""):"",tavilyApiKey:tavilyApproved?(Deno.env.get("TAVILY_API_KEY")||""):"",braveApiKey:braveApproved?(Deno.env.get("BRAVE_SEARCH_API_KEY")||""):""});
      for(const source of [
-      {key:"gdelt_free_news_search",name:"GDELT Project",prefix:"GDELT",approved},\n      {key:"brave_public_web_search",name:"Brave Search",prefix:"Brave Search",approved:braveApproved},
+      {key:"gdelt_free_news_search",name:"GDELT Project",prefix:"GDELT",approved},
+      {key:"brave_public_web_search",name:"Brave Search",prefix:"Brave Search",approved:braveApproved},
       {key:"google_news_rss",name:"Google News RSS",prefix:"Google News RSS",approved:rssApproved},
       {key:"searxng_self_hosted",name:"SearXNG",prefix:"SearXNG",approved:searxngApproved},
       {key:"tavily_search",name:"Tavily",prefix:"Tavily",approved:tavilyApproved}
