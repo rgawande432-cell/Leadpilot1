@@ -137,7 +137,7 @@ This document is the development guardrail: **upgrade the canonical feature inst
 
 ## Rate-limit resilience / optional SearXNG (2026-11-27)
 
-- Public discovery now supports an optional self-hosted SearXNG fallback after GDELT and Google News RSS.
-- Configure Supabase Edge Function secret `SEARXNG_URL` with the base URL of a private/owned SearXNG instance that has JSON output enabled. No public shared instance is hard-coded.
-- SearXNG is optional; without the secret the existing providers run unchanged. It is free software, but the operator still pays for hosting and upstream engines can rate-limit/block; this is not unlimited guaranteed search.
+- Public discovery supports optional SearXNG and Tavily fallbacks after GDELT and Google News RSS.
+- Configure optional Supabase Edge Function secrets: `SEARXNG_URL` for a private/owned SearXNG instance with JSON output enabled, and `TAVILY_API_KEY` for Tavily's API. No public shared instance is hard-coded.
+- Both fallbacks are optional. SearXNG is free software but requires hosting and its upstream engines can still throttle/block. Tavily has a free monthly quota, not unlimited use. Without either secret, the existing GDELT and Google News RSS behavior remains.
 - Candidate review, relevance scoring, deduplication, source attribution and verification rules remain in place. CI/deployment validation is pending.
