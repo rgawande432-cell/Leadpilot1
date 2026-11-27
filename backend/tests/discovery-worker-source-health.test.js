@@ -24,3 +24,21 @@ test("empty but successful fallback providers do not fail the scheduled scan",()
   assert.match(worker,/providerSuccesses\.length/);
   assert.match(worker,/externalStatus=search\.errors\.length\?"degraded":"connected"/);
 });
+
+
+test("public intent search gates optional providers on approval and configured credentials",async()=>{
+  const search=await readFile(resolve(root,"supabase/functions/public-intent-search/index.ts"),"utf8");
+  assert.match(search,/const sourceCatalog/);
+  assert.match(search,/const rssApproved=approved\("google_news_rss"\)/);
+  assert.match(search,/googleNewsRssEnabled:rssApproved/);
+  assert.match(search,/searxngApproved\?\(Deno\.env\.get\("SEARXNG_URL"\)/);
+  assert.match(search,/tavilyApproved\?\(Deno\.env\.get\("TAVILY_API_KEY"\)/);
+  assert.match(search,/No public search provider is enabled, terms-reviewed, and configured/);
+});
+
+test("public search provider health records distinguish disabled, success and no-results",async()=>{
+  const search=await readFile(resolve(root,"supabase/functions/public-intent-search/index.ts"),"utf8");
+  assert.match(search,/const status=!source\.approved\?"disabled":failed\?/);
+  assert.match(search,/succeeded\?"healthy":"no_results"/);
+  assert.match(search,/successful:source\.approved&&succeeded/);
+});
