@@ -12,7 +12,8 @@ const providerCatalog=await readFile(resolve(root,"supabase/migrations/202611271
 test("Brave scan uses fresh India-targeted buyer-intent query set",()=>{
   assert.match(scan,/looking for/);
   assert.match(scan,/recommend/);
-  assert.match(scan,/slice\(0,4\)/);\n  assert.match(scan,/request quote/);
+  assert.match(scan,/slice\(0,4\)/);
+  assert.match(scan,/request quote/);
   assert.match(scan,/country","IN"/);
   assert.match(scan,/freshness","pw"/);
   assert.match(scan,/count","8"/);
