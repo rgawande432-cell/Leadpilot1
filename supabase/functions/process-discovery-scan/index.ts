@@ -64,10 +64,12 @@ Deno.serve(async (req) => {
   if (configError || !config || config.status !== "active") return json({ error: "AI discovery is paused or not configured" }, 409);
 
   const now = new Date().toISOString();
-  const { error: runningError } = await admin.from("ai_discovery_jobs")
+  const { data: claimedJob, error: runningError } = await admin.from("ai_discovery_jobs")
     .update({ status: "running", started_at: now, attempts: (job.attempts || 0) + 1, error_message: null })
-    .eq("id", jobId).eq("business_id", businessId);
+    .eq("id", jobId).eq("business_id", businessId).eq("status", "queued")
+    .select("id").maybeSingle();
   if (runningError) return json({ error: "Could not start scan job" }, 500);
+  if (!claimedJob) return json({ error: "Scan job is already running or has already been processed" }, 409);
 
   const { data: run, error: runError } = await admin.from("ai_discovery_runs")
     .insert({ business_id: businessId, config_id: config.id, status: "running", started_at: now, source_name: "Approved free public-news scan" })
