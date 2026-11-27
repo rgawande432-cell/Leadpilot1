@@ -46,7 +46,9 @@ Deno.serve(async(req)=>{
     if(!response.ok)throw new Error("Brave search HTTP "+response.status);
     const data=await response.json();for(const item of (data.web?.results||[])){try{const parsed=new URL(item.url);if(!["http:","https:"].includes(parsed.protocol))continue;results.push({query:q,title:item.title||"",url:parsed.href,snippet:item.description||""});}catch{continue;}}
    }
-   const terms=[business.niche,business.business_type,...(business.services||[])].filter(Boolean);\n   candidates=await saveDiscoveryCandidates({admin,businessId,runId:run.id,candidates:results,terms,mode:"text_intent",sourceName:"Brave Search",maxCandidates:25});\n   externalStatus="connected"; 
+   const terms=[business.niche,business.business_type,...(business.services||[])].filter(Boolean);
+   candidates=await saveDiscoveryCandidates({admin,businessId,runId:run.id,candidates:results,terms,mode:"text_intent",sourceName:"Brave Search",maxCandidates:25});
+   externalStatus="connected"; 
   }catch(e){externalStatus="error";externalError=e instanceof Error?e.message:String(e);}
  }
  const completed=new Date().toISOString();
