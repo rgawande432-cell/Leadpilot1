@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 import { parseGoogleNewsRss } from "../_shared/google-news-rss.js";
 import { parseGdeltResponse } from "../_shared/gdelt-response.js";
-import { saveDiscoveryCandidates } from "../_shared/discovery-candidate-processing.js";
+import { saveDiscoveryCandidates } from "../_shared/discovery-candidate-processing.js";\nimport { fetchNewsCandidates } from "../_shared/news-search-provider.js";
 const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type, x-leadpilot-worker-token","Access-Control-Allow-Methods":"POST, OPTIONS"};
 const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...cors,"Content-Type":"application/json"}});
 const clean=(s:string)=>String(s||"").toLowerCase().replace(/\s+/g," ").trim().slice(0,600);
@@ -40,28 +40,7 @@ Deno.serve(async(req)=>{
    const query='"'+category+'" "'+area+'"';
    const terms=[biz.niche,biz.business_type,...(biz.services||[]),...(cfg.keywords||[])].filter(Boolean).map((t:string)=>String(t).toLowerCase()).filter((t:string)=>t.length>=3);
    let savedCount=0,articles:any[]=[],provider="none",externalStatus=approved?"connected":"source_disabled",errorText=approved?"":"Free news source disabled or terms review incomplete.";
-   if(approved){
-    try{
-     const endpoint=new URL("https://api.gdeltproject.org/api/v2/doc/doc");
-     endpoint.searchParams.set("query",query);endpoint.searchParams.set("mode","ArtList");endpoint.searchParams.set("format","json");endpoint.searchParams.set("maxrecords","20");endpoint.searchParams.set("timespan","7d");endpoint.searchParams.set("sort","DateDesc");
-     const response=await fetch(endpoint,{headers:{"Accept":"application/json"}});
-     let fallbackReason="";
-     if(response.ok){
-      const raw=await response.text();
-      const parsed=parseGdeltResponse(raw);articles=parsed.articles;if(articles.length)provider="GDELT Project";else fallbackReason=parsed.fallbackReason;
-     }else if(response.status===429||response.status>=500)fallbackReason="GDELT HTTP "+response.status;
-     else throw new Error("GDELT HTTP "+response.status);
-     if(fallbackReason||!articles.length){
-      const rssUrl=new URL("https://news.google.com/rss/search");rssUrl.searchParams.set("q",query+" when:7d");rssUrl.searchParams.set("hl","en-IN");rssUrl.searchParams.set("gl","IN");rssUrl.searchParams.set("ceid","IN:en");
-      const rss=await fetch(rssUrl,{headers:{"Accept":"application/rss+xml, application/xml, text/xml"}});
-      if(!rss.ok)throw new Error((fallbackReason||"GDELT returned no articles")+"; Google News RSS "+rss.status);
-      articles=parseGoogleNewsRss(await rss.text());provider="Google News RSS fallback";
-     }
-     const candidates=articles.map((result:any)=>({title:String(result.title||""),url:String(result.url||""),domain:String(result.domain||""),date:String(result.date||result.seendate||"")}));
-     savedCount=await saveDiscoveryCandidates({admin,businessId:biz.id,runId:runId||run.id,candidates,terms,mode:"title_explicit",sourceName:provider+" (free search)",maxCandidates:20});
-    }catch(e){externalStatus="error";errorText=e instanceof Error?e.message:String(e);}
-   }
-   const completed=new Date().toISOString();
+   if(approved){\n    try{\n     const search=await fetchNewsCandidates([query],{maxRecords:20,timespan:"7d"});\n     articles=search.results;provider=search.providers.join(" + ")||"none";\n     if(!articles.length&&search.errors.length)throw new Error(search.errors.join("; "));\n     const candidates=articles.map((result:any)=>({title:String(result.title||""),url:String(result.url||""),domain:String(result.domain||""),date:String(result.date||"")}));\n     savedCount=await saveDiscoveryCandidates({admin,businessId:biz.id,runId:runId||run.id,candidates,terms,mode:"title_explicit",sourceName:provider+" (free search)",maxCandidates:20});\n    }catch(e){externalStatus="error";errorText=e instanceof Error?e.message:String(e);}\n   }\n   const completed=new Date().toISOString();
    const report={business_name:biz.name,existing_real_enquiries:leadCount||0,verified_intent_signals:verifiedCount||0,pending_search_candidates:savedCount,external_search_status:externalStatus,external_search_error:errorText,provider,queries:approved?[query]:[],note:approved?"Public news results are weak signals, not confirmed buyer intent. Data source attribution: GDELT Project and/or Google News RSS. Pending verification only.":"No external provider active; no fabricated leads or signals created."};
    await admin.from("ai_discovery_runs").update({status:externalStatus==="error"?"failed":"completed",completed_at:completed,signals_found:savedCount,leads_created:0,source_name:provider||"Scheduled internal check",error_summary:errorText||report.note}).eq("id",runId);
    await admin.from("ai_discovery_jobs").update({status:externalStatus==="error"?"failed":"completed",completed_at:completed,next_retry_at:externalStatus==="error"?new Date(Date.now()+Math.min(60,10*(job.attempts||1))*60000).toISOString():null,error_message:errorText||null,metadata:{...(job.metadata||{}),report}}).eq("id",job.id);
