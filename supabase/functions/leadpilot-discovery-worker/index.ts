@@ -17,8 +17,14 @@ Deno.serve(async(req)=>{
  const admin=createClient(url,service);
  const auth=await admin.rpc("verify_leadpilot_discovery_worker_token",{p_token:token});
  if(auth.error||auth.data!==true)return json({error:"Unauthorized"},401);
- const {data:source}=await admin.from("ai_discovery_sources").select("enabled,terms_reviewed").eq("source_key","gdelt_free_news_search").maybeSingle();
- const approved=!!source?.enabled&&!!source?.terms_reviewed;
+ const {data:sourceCatalog,error:sourceCatalogError}=await admin.from("ai_discovery_sources").select("source_key,enabled,terms_reviewed,requires_credentials");
+ if(sourceCatalogError)return json({error:"Discovery source catalog unavailable"},503);
+ const sourceByKey=new Map((sourceCatalog||[]).map((source:any)=>[source.source_key,source]));
+ const isApproved=(key:string)=>{const source=sourceByKey.get(key);return !!source?.enabled&&!!source?.terms_reviewed;};
+ const approved=isApproved("gdelt_free_news_search");
+ const rssApproved=isApproved("google_news_rss");
+ const searxngApproved=isApproved("searxng_self_hosted")&&!!Deno.env.get("SEARXNG_URL");
+ const tavilyApproved=isApproved("tavily_search")&&!!Deno.env.get("TAVILY_API_KEY");
  const claim=await admin.rpc("claim_leadpilot_discovery_jobs",{p_limit:1});
  if(claim.error)return json({error:claim.error.message},500);
  const jobs=claim.data||[],reports=[];
@@ -42,10 +48,19 @@ Deno.serve(async(req)=>{
    let savedCount=0,articles:any[]=[],provider="none",externalStatus=approved?"connected":"source_disabled",errorText=approved?"":"Free news source disabled or terms review incomplete.";
    if(approved){
     try{
-     const search=await fetchNewsCandidates(searchQueries,{maxRecords:20,timespan:"7d",searxngUrl:Deno.env.get("SEARXNG_URL")||"",tavilyApiKey:Deno.env.get("TAVILY_API_KEY")||""});
-     for(const source of [{key:"gdelt_free_news_search",name:"GDELT Project",prefix:"GDELT"},{key:"google_news_rss",name:"Google News RSS",prefix:"Google News RSS"},{key:"searxng_self_hosted",name:"SearXNG",prefix:"SearXNG"},{key:"tavily_search",name:"Tavily",prefix:"Tavily"}]){
+     const search=await fetchNewsCandidates(searchQueries,{maxRecords:20,timespan:"7d",googleNewsRssEnabled:rssApproved,searxngUrl:searxngApproved?(Deno.env.get("SEARXNG_URL")||""):"",tavilyApiKey:tavilyApproved?(Deno.env.get("TAVILY_API_KEY")||""):""});
+     const sourceHealthWarnings:string[]=[];
+     for(const source of [
+      {key:"gdelt_free_news_search",name:"GDELT Project",prefix:"GDELT",approved},
+      {key:"google_news_rss",name:"Google News RSS",prefix:"Google News RSS",approved:rssApproved},
+      {key:"searxng_self_hosted",name:"SearXNG",prefix:"SearXNG",approved:searxngApproved},
+      {key:"tavily_search",name:"Tavily",prefix:"Tavily",approved:tavilyApproved}
+     ]){
       const used=search.providers.includes(source.name),failed=search.errors.some((e:string)=>e.startsWith(source.prefix));
-      await recordDiscoverySourceHealth({admin,businessId:biz.id,sourceKey:source.key,status:failed?(used?"degraded":"failed"):(used?"healthy":"no_results"),successful:used||!failed,notes:search.errors.filter((e:string)=>e.startsWith(source.prefix)).join("; ")||(!used?"No matching articles in search window":"Provider returned articles")});
+      const status=!source.approved?"disabled":failed?(used?"degraded":"failed"):"healthy";
+      const notes=!source.approved?"Source not enabled/terms-reviewed or required credential missing":search.errors.filter((e:string)=>e.startsWith(source.prefix)).join("; ")||(!used?"No matching articles in search window":"Provider returned articles");
+      const healthSaved=await recordDiscoverySourceHealth({admin,businessId:biz.id,sourceKey:source.key,status,successful:source.approved&&!failed,notes});
+      if(!healthSaved)sourceHealthWarnings.push(source.name+" health status could not be saved");
      }
      articles=search.results;provider=search.providers.join(" + ")||"none";
      if(!articles.length&&search.errors.length)throw new Error(search.errors.join("; "));
