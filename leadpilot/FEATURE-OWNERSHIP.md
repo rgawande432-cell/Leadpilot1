@@ -14,7 +14,7 @@ This document is the development guardrail: **upgrade the canonical feature inst
 | Public enquiry intake | `supabase/functions/submit-lead/index.ts` | One intake path; database rate-limit and duplicate RPCs guard persistence |
 | Scheduled discovery processing | `supabase/functions/leadpilot-discovery-worker/index.ts` | Queue-claimed jobs and shared response parsers |
 | Owner-triggered discovery scan | `supabase/functions/process-discovery-scan/index.ts` | Separate trigger/auth path; do not create another worker—share processing logic when refactoring |
-| Public intent candidate search | `supabase/functions/public-intent-search/index.ts` | Search candidates only; not verified leads or auto-CRM contacts |
+| Public intent candidate search | `supabase/functions/public-intent-search/index.ts` | Search candidates only; not verified leads or auto-CRM contacts |\n| Discovery candidate classification, matching, scoring and persistence | `supabase/functions/_shared/discovery-candidate-processing.js` | Scheduled worker and owner-triggered scan; provider adapters remain separate |
 | Public customer directory search | `supabase/functions/public-business-search/index.ts` | Business opt-in directory endpoint; not a second business-profile system |
 
 ## Phase modules (not connected to the live UI unless explicitly wired)
@@ -32,8 +32,8 @@ This document is the development guardrail: **upgrade the canonical feature inst
 - [x] Legacy lead capture validation delegates to canonical validation.
 - [x] Legacy duplicate check delegates to canonical business-scoped dedupe.
 - [x] Added regression tests for these consolidations.
-- [ ] Complete full UI/API/DB ownership audit and review all disconnected phase modules before future feature additions.
-- [ ] Verify Supabase Edge Function type-check and PR CI; this audit session could not run Deno checks and GitHub Actions checks were not returned.
+- [x] Consolidated common discovery candidate filtering, intent classification, term matching, scoring, dedupe and pending-signal persistence into one shared processor; scheduled and owner-triggered paths use it.\n- [ ] Complete full UI/API/DB ownership audit and review all disconnected phase modules before future feature additions.
+- [ ] Verify Supabase Edge Function type-check and PR CI; the latest Deno validation currently reports failure and must be diagnosed before considering this refactor complete.
 
 ## Required workflow for future changes
 
