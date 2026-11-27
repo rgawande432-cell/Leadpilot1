@@ -66,6 +66,16 @@ Deno.serve(async(req)=>{
      const candidates=articles.map((result:any)=>({title:String(result.title||""),url:String(result.url||""),domain:String(result.domain||""),date:String(result.date||"")}));
      savedCount=await saveDiscoveryCandidates({admin,businessId:biz.id,runId:runId as string,candidates,terms,mode:"title_explicit",sourceName:provider+" (free search)",maxCandidates:20});
     }catch(e){externalStatus="error";errorText=e instanceof Error?e.message:String(e);}
+   }else{
+    for(const source of [
+     {key:"gdelt_free_news_search",name:"GDELT Project"},
+     {key:"google_news_rss",name:"Google News RSS"},
+     {key:"searxng_self_hosted",name:"SearXNG"},
+     {key:"tavily_search",name:"Tavily"}
+    ]){
+     const healthSaved=await recordDiscoverySourceHealth({admin,businessId:biz.id,sourceKey:source.key,status:"disabled",successful:false,notes:"Source is disabled or terms review is incomplete"});
+     if(!healthSaved)sourceHealthWarnings.push(source.name+" health status could not be saved");
+    }
    }
    const completed=new Date().toISOString();
    const report={business_name:biz.name,existing_real_enquiries:leadCount||0,verified_intent_signals:verifiedCount||0,pending_search_candidates:savedCount,external_search_status:externalStatus,external_search_error:errorText,provider_health_warnings:sourceHealthWarnings,provider,queries:approved?searchQueries:[],note:approved?"Public news results are weak signals, not confirmed buyer intent. Data source attribution: GDELT Project and/or Google News RSS. Pending verification only.":"No external provider active; no fabricated leads or signals created."};
