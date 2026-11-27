@@ -167,7 +167,7 @@ test("Brave Search fallback returns normalized public candidates and uses API-ke
   const fetcher=async(url,init={})=>{
     calls.push({url:String(url),init});
     if(String(url).includes("api.gdeltproject.org"))return new Response(JSON.stringify({articles:[]}),{status:200});
-    if(String(url).includes("api.search.brave.com"))return new Response(JSON.stringify({web:{results:[{title:"Looking for a supplier",url:"https://example.com/buyer",description:"Need a local supplier",page_age:"2026-11-27"}]}}),{status:200});
+    if(String(url).includes("api.search.brave.com"))return new Response(JSON.stringify({web:{results:[{title:"Looking for a supplier",url:"https://example.com/buyer",description:"Need a local supplier",page_age:"2026-11-27"}]},discussions:{results:[{title:"Anyone know where to buy this?",url:"https://forum.example.com/request",description:"Looking for a local provider",age:"1 day ago"}]}}),{status:200});
     throw new Error("RSS should not be called when Brave returns results");
   };
   const result=await fetchNewsCandidates(["buyer intent Pune"],{fetcher,braveApiKey:"brave-test",googleNewsRssEnabled:true});
@@ -178,7 +178,7 @@ test("Brave Search fallback returns normalized public candidates and uses API-ke
   const request=calls.find(x=>x.url.includes("api.search.brave.com"));
   assert.equal(request.init.headers["X-Subscription-Token"],"brave-test");
   assert.match(request.url,/country=IN/);
-  assert.match(request.url,/freshness=pw/);
+  assert.match(request.url,/freshness=pw/);\n  assert.match(request.url,/result_filter=/);
 });
 
 test("Brave Search is not called without an approved API key passed to the adapter",async()=>{
