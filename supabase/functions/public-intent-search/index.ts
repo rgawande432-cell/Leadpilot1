@@ -32,7 +32,9 @@ Deno.serve(async(req)=>{
   const savedCount=await saveDiscoveryCandidates({admin,businessId,candidates:[candidate],terms,mode:"text_intent",sourceName:"GDELT/Google News RSS (owner-reviewed)",maxCandidates:1});
   return json({status:savedCount?"saved_pending_review":"not_relevant",saved_count:savedCount,warning:"Candidate saved as pending verification only; it is not a verified lead."});
  }
- const {data:cfg}=await client.from("ai_discovery_configs").select("keywords").eq("business_id",businessId).maybeSingle();\n const configuredKeywords=(cfg?.keywords||[]).filter(Boolean).slice(0,2);\n const niche=business.niche||business.business_type||business.name,area=body.area||business.location||"India";
+ const {data:cfg}=await client.from("ai_discovery_configs").select("keywords").eq("business_id",businessId).maybeSingle();
+ const configuredKeywords=(cfg?.keywords||[]).filter(Boolean).slice(0,2);
+ const niche=business.niche||business.business_type||business.name,area=body.area||business.location||"India";
  const serviceTerms=(business.services||[]).filter(Boolean).slice(0,4).join(" ")||niche;
  const queryList=[`"${niche}" "${area}"`,`"${serviceTerms}" "${area}"`,`"${niche}" "${area}" "looking for"`,...configuredKeywords.map(k=>`"${k}" "${area}" "looking for"`)].filter((q,i,a)=>a.indexOf(q)===i);
  const provider="GDELT Project and/or Google News RSS";
