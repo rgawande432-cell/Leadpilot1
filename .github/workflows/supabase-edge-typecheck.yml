@@ -1,0 +1,30 @@
+name: Supabase Edge Function Type Check
+
+on:
+  push:
+    paths:
+      - "supabase/functions/**"
+      - ".github/workflows/supabase-edge-typecheck.yml"
+  pull_request:
+    paths:
+      - "supabase/functions/**"
+      - ".github/workflows/supabase-edge-typecheck.yml"
+
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Type-check all Supabase Edge Functions
+        run: |
+          deno check \
+            supabase/functions/content-generation/index.ts \
+            supabase/functions/public-intent-search/index.ts \
+            supabase/functions/provider-status/index.ts \
+            supabase/functions/public-business-profile/index.ts \
+            supabase/functions/leadpilot-discovery-worker/index.ts \
+            supabase/functions/process-discovery-scan/index.ts \
+            supabase/functions/submit-lead/index.ts
