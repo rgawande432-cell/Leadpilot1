@@ -56,8 +56,8 @@ Deno.serve(async(req)=>{
       {key:"tavily_search",name:"Tavily",prefix:"Tavily",approved:tavilyApproved}
      ]){
       const used=search.providers.includes(source.name),succeeded=search.providerSuccesses.includes(source.name),failed=search.errors.some((e:string)=>e.startsWith(source.prefix));
-      const status=!source.approved?"disabled":failed?(succeeded?"degraded":"failed"):(succeeded?"healthy":"not_connected");
-      const notes=!source.approved?"Source not enabled/terms-reviewed or required credential missing":search.errors.filter((e:string)=>e.startsWith(source.prefix)).join("; ")||(!used&&succeeded?"Provider responded but returned no matching articles":(!succeeded?"Provider was not successfully reached":"Provider returned articles"));
+      const status=!source.approved?"disabled":failed?(succeeded?"degraded":"failed"):(succeeded?(used?"healthy":"no_results"):"not_connected");
+      const notes=!source.approved?"Source not enabled/terms-reviewed or required credential missing":search.errors.filter((e:string)=>e.startsWith(source.prefix)).join("; ")||(used?"Provider returned articles":(succeeded?"Provider connected; no matching articles":"Provider was not successfully reached"));
       const healthSaved=await recordDiscoverySourceHealth({admin,businessId:biz.id,sourceKey:source.key,status,successful:source.approved&&succeeded,notes});
       if(!healthSaved)sourceHealthWarnings.push(source.name+" health status could not be saved");
      }
