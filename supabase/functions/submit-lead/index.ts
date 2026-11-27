@@ -31,7 +31,6 @@ Deno.serve(async (req: Request) => {
     const email = String(body.email || "").trim().toLowerCase();
     const message = String(body.message || "").trim();
     const customerLocation = String(body.location || body.customer_location || "").trim();
-    const customerLocation = String(body.location || body.customer_location || "").trim();
     const source = String(body.source || "Website").trim().slice(0, 80);
     const consent = body.consent === true;
     const consentText = "I agree to share my contact details, location and enquiry with this business so they can respond to my request.";
