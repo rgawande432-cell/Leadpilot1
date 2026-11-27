@@ -37,6 +37,7 @@ begin
   if p.status <> 'contact_verified'
      or (nullif(trim(p.contact_phone), '') is null and nullif(trim(p.contact_email), '') is null)
      or p.contact_verified_at is null
+     or p.contact_verified_by is distinct from auth.uid()
      or nullif(trim(p.contact_verification_source), '') is null then
     raise exception 'Prospect contact must be independently verified before CRM conversion';
   end if;
