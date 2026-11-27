@@ -55,14 +55,16 @@ Deno.serve(async(req)=>{
       {key:"searxng_self_hosted",name:"SearXNG",prefix:"SearXNG",approved:searxngApproved},
       {key:"tavily_search",name:"Tavily",prefix:"Tavily",approved:tavilyApproved}
      ]){
-      const used=search.providers.includes(source.name),failed=search.errors.some((e:string)=>e.startsWith(source.prefix));
-      const status=!source.approved?"disabled":failed?(used?"degraded":"failed"):"healthy";
-      const notes=!source.approved?"Source not enabled/terms-reviewed or required credential missing":search.errors.filter((e:string)=>e.startsWith(source.prefix)).join("; ")||(!used?"No matching articles in search window":"Provider returned articles");
-      const healthSaved=await recordDiscoverySourceHealth({admin,businessId:biz.id,sourceKey:source.key,status,successful:source.approved&&!failed,notes});
+      const used=search.providers.includes(source.name),succeeded=search.providerSuccesses.includes(source.name),failed=search.errors.some((e:string)=>e.startsWith(source.prefix));
+      const status=!source.approved?"disabled":failed?(succeeded?"degraded":"failed"):(succeeded?"healthy":"not_connected");
+      const notes=!source.approved?"Source not enabled/terms-reviewed or required credential missing":search.errors.filter((e:string)=>e.startsWith(source.prefix)).join("; ")||(!used&&succeeded?"Provider responded but returned no matching articles":(!succeeded?"Provider was not successfully reached":"Provider returned articles"));
+      const healthSaved=await recordDiscoverySourceHealth({admin,businessId:biz.id,sourceKey:source.key,status,successful:source.approved&&succeeded,notes});
       if(!healthSaved)sourceHealthWarnings.push(source.name+" health status could not be saved");
      }
      articles=search.results;provider=search.providers.join(" + ")||"none";
-     if(!articles.length&&search.errors.length)throw new Error(search.errors.join("; "));
+     if(!articles.length&&!search.providerSuccesses.length)throw new Error(search.errors.join("; ")||"All discovery providers failed");
+     externalStatus=search.errors.length?"degraded":"connected";
+     errorText=search.errors.join("; ");
      const candidates=articles.map((result:any)=>({title:String(result.title||""),url:String(result.url||""),domain:String(result.domain||""),date:String(result.date||"")}));
      savedCount=await saveDiscoveryCandidates({admin,businessId:biz.id,runId:runId as string,candidates,terms,mode:"title_explicit",sourceName:provider+" (free search)",maxCandidates:20});
     }catch(e){externalStatus="error";errorText=e instanceof Error?e.message:String(e);}
