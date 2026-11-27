@@ -70,3 +70,14 @@ test("shared processor ignores invalid URLs and candidate without business term"
   assert.equal(saved, 0);
   assert.equal(admin.records.length, 0);
 });
+
+test("configured business keywords can match candidate evidence", async () => {
+  const admin = mockAdmin();
+  const saved = await saveDiscoveryCandidates({
+    admin, businessId: "biz-4", runId: "run-4",
+    candidates: [{ title: "Looking for a supplier", url: "https://example.com/keyword", snippet: "Need industrial LED fixtures" }],
+    terms: ["industrial LED fixtures"], mode: "text_intent", sourceName: "Configured keyword"
+  });
+  assert.equal(saved, 1);
+  assert.equal(admin.records[0].payload.business_id, "biz-4");
+});
