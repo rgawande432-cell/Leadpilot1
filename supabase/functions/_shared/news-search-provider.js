@@ -78,12 +78,12 @@ export async function fetchNewsCandidates(queries = [], options = {}) {
         endpoint.searchParams.set("search_lang", "en");
         endpoint.searchParams.set("count", String(Math.min(20, maxRecords)));
         endpoint.searchParams.set("freshness", "pw");
-        endpoint.searchParams.set("result_filter", "web");
+        endpoint.searchParams.set("result_filter", "web,discussions");
         const response = await fetcher(endpoint, { headers: { Accept: "application/json", "X-Subscription-Token": options.braveApiKey } });
         if (!response.ok) throw new Error("Brave Search HTTP " + response.status);
         const data = await response.json();
         providerSuccesses.add("Brave Search");
-        articles = normalizeExternalResults((data.web?.results || []).map((item) => ({ title: item.title, url: item.url, description: item.description, page_age: item.page_age })), "page_age").slice(0, maxRecords);
+        articles = normalizeExternalResults([...(data.web?.results || []), ...(data.discussions?.results || [])].map((item) => ({ title: item.title, url: item.url, description: item.description, page_age: item.page_age || item.age })), "page_age").slice(0, maxRecords);
         if (articles.length) providers.add("Brave Search");
       } catch (error) { errors.push("Brave Search: " + (error instanceof Error ? error.message : String(error))); }
     }
