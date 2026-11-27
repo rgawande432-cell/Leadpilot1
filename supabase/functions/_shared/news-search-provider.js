@@ -10,9 +10,9 @@ const validHttpUrl = (value) => {
   }
 };
 
-/** Fetch public article candidates with one shared GDELT -> Google News RSS fallback.
+/** Fetch public article candidates with GDELT -> Google News RSS -> optional self-hosted SearXNG fallback.
  * @param {string[]} queries
- * @param {{fetcher?:typeof fetch,maxRecords?:number,timespan?:string,hl?:string,gl?:string,ceid?:string}} options
+ * @param {{fetcher?:typeof fetch,maxRecords?:number,timespan?:string,hl?:string,gl?:string,ceid?:string,searxngUrl?:string}} options
  */
 export async function fetchNewsCandidates(queries = [], options = {}) {
   const fetcher = options.fetcher || fetch;
@@ -68,7 +68,7 @@ export async function fetchNewsCandidates(queries = [], options = {}) {
       }
     }
 
-    for (const article of articles) {
+    if (!articles.length && options.searxngUrl) {\n      try {\n        const endpoint = new URL("/search", options.searxngUrl);\n        endpoint.searchParams.set("q", query);\n        endpoint.searchParams.set("format", "json");\n        endpoint.searchParams.set("language", "en");\n        const response = await fetcher(endpoint, { headers: { Accept: "application/json" } });\n        if (!response.ok) throw new Error("SearXNG HTTP " + response.status);\n        const data = await response.json();\n        articles = (Array.isArray(data.results) ? data.results : []).slice(0, maxRecords).map((item) => ({ title: item.title || "", url: item.url || item.link || "", domain: item.url ? new URL(item.url).hostname : "", date: item.publishedDate || item.date || "" }));\n        if (articles.length) providers.add("SearXNG");\n      } catch (error) { errors.push("SearXNG: " + (error instanceof Error ? error.message : String(error))); }\n    }\n\n    for (const article of articles) {
       const url = validHttpUrl(article.url || article.link);
       if (!url) continue;
       try {
