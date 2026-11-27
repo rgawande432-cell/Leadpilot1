@@ -42,3 +42,11 @@ This document is the development guardrail: **upgrade the canonical feature inst
 3. If a phase utility is not wired into the app, do not present it as live; decide whether to connect, merge, or retire it before duplicating its capability.
 4. Add regression tests and update this ownership map with any consolidation.
 5. Do not deploy or merge while required checks are unverified or failing.
+
+## Phase-module overlap findings (2026-11-27)
+
+- Phase 28–31 profile analyzer/growth-plan prototypes and Phase 32–35 content-idea/keyword-suggestion prototypes overlap in profile-driven ideation. Both remain disconnected from the live dashboard; do not wire both as separate live generators. When connecting content ideas, choose one canonical content-idea path and adapt the other only if a distinct feature is proven needed.
+- Phase 36–39 repurposing, quality checking, and distribution planning are different downstream draft workflow stages. They do not constitute lead acquisition and should not be represented as connected posting integrations.
+- Phase 40–43 analyzes submitted enquiry patterns, prioritizes recurring topics, and produces organic-content drafts. It is separate from the lead-discovery candidate search and must not be described as a lead-generating engine.
+- Live UI content area is inline in `index.html`; phase modules above are prototypes unless an explicit runtime import/call is found.
+- Public intent search and discovery scan produce candidate signals only; owner verification remains required before treating them as genuine buyer intent or CRM leads.
