@@ -1,7 +1,7 @@
 // Shared discovery candidate filtering, intent classification, deduplication and persistence.
 // Provider adapters (Brave, GDELT, Google News RSS) remain separate; signal policy is canonical here.
 /** @param {any} value */
-const normalize = (value = "") => String(value || "").toLowerCase().replace(/\s+/g, " ").trim().slice(0, 600);
+const normalize = (value = "") => String(value || "").toLowerCase().replace(/[^\\p{L}\\p{N}]+/gu, " ").replace(/\\s+/g, " ").trim().slice(0, 600);
 
 const EXCLUDED = /(job opening|hiring|career|launch(ed)?|new product|review|award|festival|event|stock market|funding|investment|company profile)/i;
 const EXPLICIT = /(looking for|need a|need an|need to buy|want to buy|want to purchase|buying|purchase|hire|quote|quotation|price for|request for|seeking|can you supply|where can i buy|who can provide|available for)/i;
@@ -20,9 +20,9 @@ function classifyCandidate(candidate, mode) {
 
 /** @param {string} text @param {string[]} terms */
 function getTermMatches(text, terms = []) {
-  const normalized = normalize(text);
-  return [...new Set(terms.filter(Boolean).map(t => String(t).toLowerCase().trim()).filter(t => t.length >= 3))]
-    .filter(term => normalized.includes(term));
+  const normalized = " " + normalize(text) + " ";
+  return [...new Set(terms.filter(Boolean).map(t => normalize(t)).filter(t => t.length >= 3))]
+    .filter(term => normalized.includes(" " + term + " "));
 }
 
 /** @param {{admin:any,businessId:string,runId?:string,candidates?:any[],terms?:string[],mode?:string,sourceName?:string,maxCandidates?:number}} options */
