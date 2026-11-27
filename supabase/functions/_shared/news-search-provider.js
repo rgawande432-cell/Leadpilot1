@@ -28,7 +28,7 @@ const normalizeExternalResults = (items = [], dateField = "date") => {
 
 /** Fetch public article candidates with GDELT -> Google News RSS -> optional self-hosted SearXNG fallback.
  * @param {string[]} queries
- * @param {{fetcher?:typeof fetch,maxRecords?:number,timespan?:string,hl?:string,gl?:string,ceid?:string,searxngUrl?:string,tavilyApiKey?:string}} options
+ * @param {{fetcher?:typeof fetch,maxRecords?:number,timespan?:string,hl?:string,gl?:string,ceid?:string,searxngUrl?:string,tavilyApiKey?:string,googleNewsRssEnabled?:boolean}} options
  */
 export async function fetchNewsCandidates(queries = [], options = {}) {
   const fetcher = options.fetcher || fetch;
@@ -68,7 +68,7 @@ export async function fetchNewsCandidates(queries = [], options = {}) {
       }
     }
 
-    if (!articles.length) {
+    if (!articles.length && options.googleNewsRssEnabled !== false) {
       const rssUrl = new URL("https://news.google.com/rss/search");
       rssUrl.searchParams.set("q", query + " when:" + timespan);
       rssUrl.searchParams.set("hl", hl);
