@@ -64,3 +64,15 @@ export async function saveDiscoveryCandidates({
   }
   return savedCount;
 }
+
+/** Persist provider health per business/source so failures are visible and retry logic can improve.
+ * @param {{admin:any,businessId:string,sourceKey:string,status:string,notes?:string,successful?:boolean}} options
+ */
+export async function recordDiscoverySourceHealth({admin,businessId,sourceKey,status,notes="",successful=false}) {
+  const now=new Date().toISOString();
+  const prior=await admin.from("ai_discovery_source_health").select("consecutive_failures,last_success_at").eq("business_id",businessId).eq("source_key",sourceKey).maybeSingle();
+  const failures=successful?0:Math.max(0,Number(prior.data?.consecutive_failures||0))+1;
+  const payload={business_id:businessId,source_key:sourceKey,last_checked_at:now,last_success_at:successful?now:(prior.data?.last_success_at||null),consecutive_failures:failures,status:String(status||"unknown").slice(0,30),notes:String(notes||"").slice(0,1000)};
+  const saved=await admin.from("ai_discovery_source_health").upsert(payload,{onConflict:"business_id,source_key"});
+  return !saved.error;
+}
