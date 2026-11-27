@@ -71,7 +71,7 @@ test("shared processor ignores invalid URLs and candidate without business term"
   assert.equal(admin.records.length, 0);
 });
 
-test("configured business keywords can match candidate evidence", async () => {
+test("candidate processor matches evidence using supplied keyword terms", async () => {
   const admin = mockAdmin();
   const saved = await saveDiscoveryCandidates({
     admin, businessId: "biz-4", runId: "run-4",
