@@ -46,7 +46,7 @@ test("title-only scheduled mode rejects broad text questions and unrelated artic
   const saved = await saveDiscoveryCandidates({
     admin, businessId: "biz-2", runId: "run-2",
     candidates: [
-      { title: "Looking for a furniture supplier", url: "https://example.com/one", domain: "example.com", date: "2026-11-27" },
+      { title: "Looking for a furniture supplier", url: "https://example.com/one", domain: "example.com", date: "unknown-date" },
       { title: "Where is the best furniture shop?", url: "https://example.com/two" },
       { title: "Furniture company launches new product", url: "https://example.com/three" }
     ],
@@ -120,4 +120,25 @@ test("provider health upsert resets failures on success and keeps disabled sourc
   assert.equal(calls[0].payload.last_success_at,calls[0].payload.last_checked_at);
   assert.equal(calls[1].payload.consecutive_failures,3);
   assert.equal(calls[1].payload.last_success_at,"2026-11-01T00:00:00Z");
+});
+
+test("candidate score gives a freshness bonus for recent source dates but not stale evidence", async () => {
+  const recentAdmin = mockAdmin();
+  const staleAdmin = mockAdmin();
+  const today = new Date().toISOString().slice(0, 10);
+  const recent = await saveDiscoveryCandidates({
+    admin: recentAdmin, businessId: "biz-recent",
+    candidates: [{ title: "Looking for furniture supplier", url: "https://example.com/recent", snippet: "Need furniture", date: today }],
+    terms: ["furniture"], mode: "text_intent"
+  });
+  const stale = await saveDiscoveryCandidates({
+    admin: staleAdmin, businessId: "biz-stale",
+    candidates: [{ title: "Looking for furniture supplier", url: "https://example.com/stale", snippet: "Need furniture", date: "2020-01-01" }],
+    terms: ["furniture"], mode: "text_intent"
+  });
+  assert.equal(recent, 1);
+  assert.equal(stale, 1);
+  assert.ok(recentAdmin.records[0].payload.score > staleAdmin.records[0].payload.score);
+  assert.equal(recentAdmin.records[0].payload.verification_status, "pending");
+  assert.equal(staleAdmin.records[0].payload.verification_status, "pending");
 });
