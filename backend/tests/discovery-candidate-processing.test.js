@@ -142,3 +142,32 @@ test("candidate score gives a freshness bonus for recent source dates but not st
   assert.equal(recentAdmin.records[0].payload.verification_status, "pending");
   assert.equal(staleAdmin.records[0].payload.verification_status, "pending");
 });
+
+test("candidate URLs canonicalize tracking parameters and fragments before dedupe", async () => {
+  const admin = mockAdmin();
+  const saved = await saveDiscoveryCandidates({
+    admin, businessId: "biz-url-dedupe",
+    candidates: [
+      { title: "Looking for furniture supplier", url: "https://Example.com/request/?utm_source=feed&fbclid=abc#post", snippet: "Need furniture" },
+      { title: "duplicate tracking variant", url: "https://example.com/request?utm_campaign=other", snippet: "Looking for furniture" }
+    ],
+    terms: ["furniture"], mode: "text_intent"
+  });
+  assert.equal(saved, 1);
+  assert.equal(admin.records.length, 1);
+  assert.equal(admin.records[0].payload.source_url, "https://example.com/request");
+});
+
+test("candidate save limit is bounded and only processes the configured first candidates", async () => {
+  const admin = mockAdmin();
+  const candidates = Array.from({ length: 5 }, (_, i) => ({
+    title: "Looking for furniture supplier",
+    url: `https://example.com/item-${i}`,
+    snippet: "Need furniture"
+  }));
+  const saved = await saveDiscoveryCandidates({
+    admin, businessId: "biz-limit", candidates, terms: ["furniture"], maxCandidates: 2
+  });
+  assert.equal(saved, 2);
+  assert.equal(admin.records.length, 2);
+});
