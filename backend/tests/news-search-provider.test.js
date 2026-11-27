@@ -77,3 +77,22 @@ test("SearXNG is not called when Google News RSS returns candidates", async () =
   const result = await fetchNewsCandidates(["buyer intent"], { fetcher, searxngUrl: "https://search.example.test" });
   assert.deepEqual(result.providers, ["Google News RSS"]);
 });
+
+
+test("optional Tavily fallback is used after SearXNG is absent or fails", async () => {
+  const calls = [];
+  const fetcher = async (url, init = {}) => {
+    calls.push({ url: String(url), init });
+    if (String(url).includes("api.gdeltproject.org")) return new Response(JSON.stringify({ articles: [] }), { status: 200 });
+    if (String(url).includes("news.google.com")) return new Response("<rss><channel></channel></rss>", { status: 200 });
+    if (String(url).includes("search.example.test")) return new Response("not available", { status: 503 });
+    return new Response(JSON.stringify({ results: [{ title: "Tavily buyer request", url: "https://example.net/intent", content: "looking for a supplier" }] }), { status: 200 });
+  };
+  const result = await fetchNewsCandidates(["buyer query"], { fetcher, searxngUrl: "https://search.example.test", tavilyApiKey: "tvly-test" });
+  assert.equal(result.results.length, 1);
+  assert.equal(result.results[0].title, "Tavily buyer request");
+  assert.deepEqual(result.providers, ["Tavily"]);
+  const request = calls.find(c => c.url.includes("api.tavily.com"));
+  assert.equal(request.init.method, "POST");
+  assert.equal(JSON.parse(request.init.body).api_key, "tvly-test");
+});
