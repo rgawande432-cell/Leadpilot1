@@ -1,59 +1,63 @@
-# LeadPilot AI — Advanced Growth Engine Roadmap
+# UrbanLeads by UrbanBuying — Growth Engine Status
 
-Status: execution roadmap, based on the existing MVP. Do not reset or replace completed work.
+Status snapshot: 27 November 2026. Continue from existing code; do not reset completed work.
 
-## Existing foundation (keep and build on)
-- Business profile and owner-scoped data
-- Enquiry CRM and lead status pipeline
-- Content idea / content-generation Edge Function
-- Intent Radar and manual source verification
-- Public intent search and discovery worker (provider access is gated by configuration and terms review)
-- Lead scoring, duplicate detection and spam protection
-- Analytics, notifications, campaign planning, source connections and follow-up UI sections
+## Implemented foundation
+- Business profile and owner-scoped data; website optional.
+- Enquiry CRM and status pipeline; lead qualification fields and follow-up date.
+- Public enquiry intake via `submit-lead` Edge Function; validation, duplicate checks and spam protections in backend utilities.
+- Content generation Edge Function, content ideas/FAQ and campaign draft planner.
+- Intent Radar manual verification with source URL and evidence.
+- Public intent search and scheduled discovery worker; providers/configuration are gated.
+- Analytics/status and source counts, notifications, CSV export, source connections and follow-up planner UI.
+- AI Growth Advisor uses saved business profile and CRM records to suggest profile completion, overdue follow-ups, response to new enquiries, enquiry-link sharing and outcome tracking. Latest update adds a business/niche/location-aware **Create a local content draft** action which opens Content Studio.
+- SEO landing pages, robots/sitemap and Cloudflare Pages build guide are in repository.
 
-## Advanced engine architecture
-1. **Business Intelligence Engine** — business/niche/location/service analysis; audience hypotheses clearly labelled; profile completeness; competitor research from permitted public sources.
-2. **Lead Discovery Engine** — intent queries and candidate signals from configured/approved sources; evidence and URL required; confidence and relevance score; human verification; never fabricate contacts or convert weak signals automatically into CRM leads.
-3. **Marketing Engine** — business-specific content drafts, FAQ, local campaigns, CTA, content calendar; draft-first with review; publishing only through authorized connected platforms.
-4. **Conversion Engine** — public enquiry intake, validation, spam/duplicate controls, lead scoring, CRM pipeline, follow-up suggestions and notification preferences.
-5. **Growth Intelligence Engine** — real account metrics only; source/channel performance, follow-up backlog, response time, content recommendations, next-best-action suggestions.
+## Phase A — Core reliability
+- [x] Public lead intake implementation and Edge Function deployed.
+- [x] Lead validation, spam protection, duplicate detection and owner-scoped CRM flow implemented.
+- [x] Discovery source/provider status gating implemented.
+- [ ] End-to-end owner signup/email confirmation and live public-enquiry-to-CRM verification: requires accessible current deployment and test account.
+- [ ] Live deployment smoke-test: blocked while Render quota/deployment is unavailable and Cloudflare Pages account deployment authorization is not completed.
 
-## Execution order
-### Phase A — Core reliability
-- [ ] Verify login/email confirmation flow
-- [ ] Verify business profile persistence
-- [ ] End-to-end public enquiry form -> submit-lead -> CRM
-- [ ] Rate-limit and abuse protection for public intake
-- [ ] Test source status/terms gating for discovery
+## Phase B — Growth Advisor
+- [x] Dashboard recommendations from saved profile and actual CRM data.
+- [x] Profile completeness recommendations.
+- [x] Prioritize overdue and new enquiries.
+- [x] Explain recommendations in plain language.
+- [x] Direct actions to profile, CRM, enquiry-link sharing and Content Studio.
+- [ ] Persistent completed/dismissed recommendation history: not implemented yet.
 
-### Phase B — Advanced Growth Advisor
-- [ ] Add dashboard card with next actions derived from real business and CRM data
-- [ ] Add profile completeness and niche/location/content recommendations
-- [ ] Prioritize follow-up based on lead status and age
-- [ ] Make recommendations explainable (why, data used, confidence)
-- [ ] Mark suggestions as completed/dismissed; store state per business
+## Phase C — Discovery intelligence
+- [x] Public intent search and discovery worker deployed.
+- [x] Manual evidence/source URL verification before saving intent.
+- [x] Provider status/configuration gating.
+- [x] Keep candidate signals separate from verified intent and actual enquiries.
+- [x] Avoid restricted scraping or harvesting personal contact details.
+- [ ] Full live source-by-source test with configured external providers: provider access/configuration and current deployment needed.
 
-### Phase C — Discovery intelligence
-- [ ] Query expansion by service, niche, location, synonyms and customer questions
-- [ ] Evidence snippets, source links, freshness and confidence labels
-- [ ] Separate verified intent signals from unverified candidates
-- [ ] Save only after user review; prohibit scraped personal contact details
+## Phase D — Marketing automation
+- [x] Business-specific content generation and FAQ workflow.
+- [x] Campaign draft planner and copy workflow.
+- [x] Draft-first review; no fabricated campaign performance.
+- [ ] Automatic Facebook/Instagram publishing: paused until Meta developer-account verification and OAuth app setup.
+- [ ] Google Business Profile and WhatsApp integrations: authorization/setup not completed.
 
-### Phase D — Marketing automation
-- [ ] Weekly content calendar and reusable drafts
-- [ ] CTA variants and content repurposing
-- [ ] Draft approval and authorized scheduling/publishing connectors
-- [ ] Track source links and real engagement where platform integrations permit
+## Phase E — Analytics
+- [x] Actual CRM status funnel and source counts.
+- [x] CSV export based on account records.
+- [x] Notifications from saved account data.
+- [ ] Response-time and weekly conversion reporting: not yet implemented; requires reliable timestamps/outcome data and additional analytics work.
 
-### Phase E — Business analytics
-- [ ] Lead funnel, source attribution, response time, conversion outcomes
-- [ ] Weekly report based on actual records
-- [ ] Recommendations evaluated against observed results
+## External deployment/account blockers (not code tasks)
+- Cloudflare Pages: deployment/account authorization is not available to the current tools. GitHub repository and setup guide are ready; Pages deployment must be authorized in the Cloudflare dashboard.
+- Render: deployment usage/quota issue previously blocked new deployment. The code continues to be committed to GitHub.
+- Meta: account contact verification is unresolved; social OAuth/publishing is intentionally paused.
 
-## Definition of done / integrity rules
+## Integrity / launch rules
 - No fake/demo leads in production metrics.
-- No guaranteed lead count or fabricated buyer demand.
-- Distinguish AI-generated suggestions, candidate intent signals, verified signals and actual enquiries.
-- No platform automation without valid authorization, consent and terms compliance.
+- No guaranteed lead count or fabricated buying intent.
+- AI suggestions, candidate intent, verified signals and real enquiries remain distinct.
+- No platform automation without authorization, consent and compliance with platform terms.
 - Website remains optional for business owners.
-- Each feature needs tests and verified deployment before being called live.
+- Code or database work is never described as live unless deployment and smoke tests confirm it.
