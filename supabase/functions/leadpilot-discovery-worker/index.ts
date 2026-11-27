@@ -58,7 +58,7 @@ Deno.serve(async(req)=>{
       articles=parseGoogleNewsRss(await rss.text());provider="Google News RSS fallback";
      }
      const candidates=articles.map((result:any)=>({title:String(result.title||""),url:String(result.url||""),domain:String(result.domain||""),date:String(result.date||result.seendate||"")}));
-     savedCount=await saveDiscoveryCandidates({admin,businessId:biz.id,runId,candidates,terms,mode:"title_explicit",sourceName:provider+" (free search)",maxCandidates:20});
+     savedCount=await saveDiscoveryCandidates({admin,businessId:biz.id,runId:runId||run.id,candidates,terms,mode:"title_explicit",sourceName:provider+" (free search)",maxCandidates:20});
     }catch(e){externalStatus="error";errorText=e instanceof Error?e.message:String(e);}
    }
    const completed=new Date().toISOString();
