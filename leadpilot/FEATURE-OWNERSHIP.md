@@ -16,7 +16,7 @@ This document is the development guardrail: **upgrade the canonical feature inst
 | Scheduled discovery processing | `supabase/functions/leadpilot-discovery-worker/index.ts` | Queue-claimed jobs and shared response parsers |
 | Owner-triggered discovery scan | `supabase/functions/process-discovery-scan/index.ts` | Separate trigger/auth path; do not create another worker—share processing logic when refactoring |
 | Public intent candidate search | `supabase/functions/public-intent-search/index.ts` | Search candidates only; not verified leads or auto-CRM contacts |
-| Discovery candidate classification, matching, scoring and persistence | `supabase/functions/_shared/discovery-candidate-processing.js` | Scheduled worker and owner-triggered scan; provider adapters remain separate |
+| Discovery candidate classification, matching, scoring and persistence | `supabase/functions/_shared/discovery-candidate-processing.js` | Scheduled worker, owner-triggered scan, and owner-reviewed public search candidate saves; provider adapters remain separate |
 | Public customer directory search | `supabase/functions/public-business-search/index.ts` | Business opt-in directory endpoint; not a second business-profile system |
 
 ## Phase modules (not connected to the live UI unless explicitly wired)
@@ -35,7 +35,7 @@ This document is the development guardrail: **upgrade the canonical feature inst
 - [x] Legacy lead capture validation delegates to canonical validation.
 - [x] Legacy duplicate check delegates to canonical business-scoped dedupe.
 - [x] Added regression tests for these consolidations.
-- [x] Consolidated common discovery candidate filtering, intent classification, term matching, scoring, dedupe and pending-signal persistence into one shared processor; scheduled and owner-triggered paths use it.
+- [x] Consolidated common discovery candidate filtering, intent classification, term matching, scoring, dedupe and pending-signal persistence into one shared processor; scheduled worker, owner-triggered scan, and public search manual-save flow use it.\n- [x] Removed duplicated client-side candidate classification/scoring from public search save UI; saving now invokes the canonical processor and configured discovery keywords.
 - [ ] Complete full UI/API/DB ownership audit and review all disconnected phase modules before future feature additions.
 - [x] Latest CI for the discovery consolidation head passed backend lead-processing tests, Phase 40–43 regressions, and inline JS/Supabase function validation. Earlier transient failure was corrected and rerun successfully.
 
@@ -70,3 +70,8 @@ This document is the development guardrail: **upgrade the canonical feature inst
 - Owner-triggered scan matching previously omitted configured discovery keywords. It now includes `cfg.keywords` in candidate term matching; scheduled path already did so.
 - Do not claim guaranteed lead counts. Public articles are weak candidate signals; genuine enquiries are separate and only become prospects/CRM leads after owner verification or consent-based direct enquiry.
 
+## Additional live UI/API consolidation (2026-11-27)
+
+- Public search candidate save previously duplicated intent classification, keyword matching, scoring and dedupe logic in the inline UI. That path now submits the selected candidate to the authenticated `public-intent-search` Edge Function in save mode; canonical shared processing handles relevance, score, dedupe and pending status.
+- Manual saves can be associated with no scan run (run_id is null) while retaining business-scoped dedupe and pending-verification status. Regression tests cover this behavior.
+- Campaign Planner drafts were already persisted to `leadpilot_campaign_drafts`; only its UI description incorrectly claimed browser-only storage. The copy now reflects workspace database persistence.
