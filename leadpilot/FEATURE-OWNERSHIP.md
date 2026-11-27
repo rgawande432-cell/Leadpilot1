@@ -107,3 +107,11 @@ This document is the development guardrail: **upgrade the canonical feature inst
 - Contact-verified prospects can now be manually converted to CRM records. Conversion is owner-confirmed and idempotent via the new RPC, locks the prospect row, validates owner, contact verification and verified signal, and stores the prospect-to-lead link.
 - Converted CRM records are labeled as public intent prospects and explicitly state that direct enquiry consent was not recorded. Do not use this as a consent bypass or fabricate a direct enquiry.
 - Both conversion/contact migrations are PR-only and have not been applied to live Supabase.
+
+## Final audit pass and discovery-query upgrade (2026-11-27)
+
+- Database inventory and RLS were rechecked: all public tables in the inventory have RLS enabled. Business data policies use signed-in owner checks; source catalog is authenticated read-only; intake rate-limit table denies direct authenticated access (`false` policy); service-role functions are used for backend-only operations.
+- Public discovery query set now includes explicit intent phrases such as `looking for` and `request quote`, plus configured business keywords, while candidate saving still routes through canonical filtering/scoring and remains pending owner verification.
+- Scheduled discovery worker query set now includes configured keyword + area + buyer request phrases rather than generic keyword-only searches; capped configured terms keep the scheduled provider call count bounded.
+- Provider limitations remain: the enabled free-news search is article/news oriented, not a direct scan of social/community posts. GDELT has returned HTTP 429/unexpected responses and recent RSS runs produced no candidates. No external search API credentials are configured in the source catalog; Brave search remains disabled.
+- Security advisories reviewed: leaked-password protection disabled (recommend enabling); two owner-checked SECURITY DEFINER RPCs flagged as warnings; no change made because ownership guards are in place and permission tightening needs impact review. Unused indexes are informational; no production index deletion performed.
