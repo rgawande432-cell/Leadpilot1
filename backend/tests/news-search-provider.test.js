@@ -52,3 +52,28 @@ test("adapter deduplicates links and stops GDELT after rate limit", async () => 
   assert.equal(result.providers.length, 1);
   assert.deepEqual(result.providers, ["Google News RSS"]);
 });
+
+
+test("optional SearXNG fallback is used only after GDELT and RSS yield no results", async () => {
+  const calls = [];
+  const fetcher = async (url) => {
+    calls.push(String(url));
+    if (String(url).includes("api.gdeltproject.org")) return new Response(JSON.stringify({ articles: [] }), { status: 200 });
+    if (String(url).includes("news.google.com")) return new Response("<rss><channel></channel></rss>", { status: 200 });
+    return new Response(JSON.stringify({ results: [{ title: "Local buyer signal", url: "https://example.org/request", publishedDate: "2026-11-27" }] }), { status: 200 });
+  };
+  const result = await fetchNewsCandidates(["buyer intent Pune"], { fetcher, searxngUrl: "https://search.example.test" });
+  assert.equal(result.results.length, 1);
+  assert.equal(result.results[0].title, "Local buyer signal");
+  assert.deepEqual(result.providers, ["SearXNG"]);
+  assert.equal(calls.length, 3);
+});
+
+test("SearXNG is not called when Google News RSS returns candidates", async () => {
+  const fetcher = async (url) => {
+    if (String(url).includes("api.gdeltproject.org")) return new Response(JSON.stringify({ articles: [] }), { status: 200 });
+    return new Response('<rss><channel><item><title>RSS result</title><link>https://example.org/rss</link></item></channel></rss>', { status: 200 });
+  };
+  const result = await fetchNewsCandidates(["buyer intent"], { fetcher, searxngUrl: "https://search.example.test" });
+  assert.deepEqual(result.providers, ["Google News RSS"]);
+});
