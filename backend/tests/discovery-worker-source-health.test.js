@@ -15,6 +15,7 @@ test("discovery worker persists health records for providers when search is disa
 
 test("worker gates optional search providers by source approval and credentials",()=>{
   assert.match(worker,/googleNewsRssEnabled:rssApproved/);
+  assert.match(worker,/maxQueries:4/);
   assert.match(worker,/searxngApproved\?\(Deno\.env\.get\("SEARXNG_URL"\)/);
   assert.match(worker,/tavilyApproved\?\(Deno\.env\.get\("TAVILY_API_KEY"\)/);
   assert.match(worker,/braveApproved\?\(Deno\.env\.get\("BRAVE_SEARCH_API_KEY"\)/);
