@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";\nimport { saveDiscoveryCandidates } from "../_shared/discovery-candidate-processing.js";
 const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type","Access-Control-Allow-Methods":"POST, OPTIONS"};
 const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...cors,"Content-Type":"application/json"}});
 const dedupe=(s:string)=>s.toLowerCase().replace(/\s+/g," ").slice(0,500);
@@ -46,20 +46,7 @@ Deno.serve(async(req)=>{
     if(!response.ok)throw new Error("Brave search HTTP "+response.status);
     const data=await response.json();for(const item of (data.web?.results||[])){try{const parsed=new URL(item.url);if(!["http:","https:"].includes(parsed.protocol))continue;results.push({query:q,title:item.title||"",url:parsed.href,snippet:item.description||""});}catch{continue;}}
    }
-   const unique=[...new Map(results.map(r=>[r.url,r])).values()];
-   for(const r of unique.slice(0,25)){
-    const evidence=(r.title+" — "+r.snippet).slice(0,2000),txt=evidence.toLowerCase();
-    const intent=/(looking for|need a|need an|want to buy|buying|purchase|hire|quote|quotation|price for|available for|request for|seeking)/i.test(txt)?"explicit":/(which|where|recommend|suggest|anyone know|how much|best|options|can anyone|who provides)/i.test(txt)?"question":"research";
-    if(intent==="research")continue;
-    const terms=[business.niche,business.business_type,...(business.services||[])].filter(Boolean).flatMap(t=>String(t).toLowerCase().split(/[^a-z0-9]+/)).filter(t=>t.length>=3);
-    const matches=[...new Set(terms)].filter(t=>txt.includes(t));
-    if(matches.length===0)continue;
-    const base=intent==="explicit"?55:intent==="question"?40:20,score=Math.min(100,base+Math.min(24,matches.length*8));
-    const payload={business_id:businessId,run_id:run.id,source_name:"Brave Search",source_url:r.url,evidence,intent_type:intent,signal_date:new Date().toISOString().slice(0,10),score,verification_status:"pending",dedupe_key:dedupe(r.url+"|"+r.snippet)};
-    const saved=await admin.from("ai_discovery_signals").upsert(payload,{onConflict:"business_id,dedupe_key"}).select("id").single();
-    if(!saved.error)candidates++;
-   }
-   externalStatus="connected"; 
+   const terms=[business.niche,business.business_type,...(business.services||[])].filter(Boolean);\n   candidates=await saveDiscoveryCandidates({admin,businessId,runId:run.id,candidates:results,terms,mode:"text_intent",sourceName:"Brave Search",maxCandidates:25});\n   externalStatus="connected"; 
   }catch(e){externalStatus="error";externalError=e instanceof Error?e.message:String(e);}
  }
  const completed=new Date().toISOString();
