@@ -45,7 +45,7 @@ Deno.serve(async(req)=>{
      articles=search.results;provider=search.providers.join(" + ")||"none";
      if(!articles.length&&search.errors.length)throw new Error(search.errors.join("; "));
      const candidates=articles.map((result:any)=>({title:String(result.title||""),url:String(result.url||""),domain:String(result.domain||""),date:String(result.date||"")}));
-     savedCount=await saveDiscoveryCandidates({admin,businessId:biz.id,runId:runId||run.id,candidates,terms,mode:"title_explicit",sourceName:provider+" (free search)",maxCandidates:20});
+     savedCount=await saveDiscoveryCandidates({admin,businessId:biz.id,runId:runId as string,candidates,terms,mode:"title_explicit",sourceName:provider+" (free search)",maxCandidates:20});
     }catch(e){externalStatus="error";errorText=e instanceof Error?e.message:String(e);}
    }
    const completed=new Date().toISOString();
