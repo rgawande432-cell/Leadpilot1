@@ -26,8 +26,8 @@ Deno.serve(async(req)=>{
  const gdeltApproved=approved("gdelt_free_news_search");
  const rssApproved=approved("google_news_rss");
  const searxngApproved=approved("searxng_self_hosted")&&!!Deno.env.get("SEARXNG_URL");
- const tavilyApproved=approved("tavily_search")&&!!Deno.env.get("TAVILY_API_KEY");
- if(!gdeltApproved&&!rssApproved&&!searxngApproved&&!tavilyApproved)return json({status:"provider_disconnected",error:"No public search provider is enabled, terms-reviewed, and configured."},403);
+ const tavilyApproved=approved("tavily_search")&&!!Deno.env.get("TAVILY_API_KEY");\n const braveApproved=approved("brave_public_web_search")&&!!Deno.env.get("BRAVE_SEARCH_API_KEY");
+ if(!gdeltApproved&&!rssApproved&&!searxngApproved&&!tavilyApproved&&!braveApproved)return json({status:"provider_disconnected",error:"No public search provider is enabled, terms-reviewed, and configured."},403);
  if(body.action==="save"){
   const candidate=body.candidate;
   if(!candidate||typeof candidate!=="object")return json({error:"candidate required"},400);
@@ -43,13 +43,13 @@ Deno.serve(async(req)=>{
  const niche=business.niche||business.business_type||business.name,area=body.area||business.location||"India";
  const serviceTerms=(business.services||[]).filter(Boolean).slice(0,4).join(" ")||niche;
  const queryList=buildLocalIntentQueries({niche,businessType:business.business_type,businessName:business.name,services:business.services||[],area,keywords:cfg?.keywords||[],maxQueries:8});
- const provider="GDELT Project and/or Google News RSS";
+ const provider="GDELT / Brave / Google News RSS / approved fallback";
  const service=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
  const healthAdmin=service?createClient(url,service):client;
  const healthWarnings:string[]=[];
  type Candidate={query:string,title:string,url:string,domain:string,date:string};
- const searched=await fetchNewsCandidates(queryList,{maxRecords:12,timespan:"7d",googleNewsRssEnabled:rssApproved,searxngUrl:searxngApproved?(Deno.env.get("SEARXNG_URL")||""):"",tavilyApiKey:tavilyApproved?(Deno.env.get("TAVILY_API_KEY")||""):""});
- for(const source of [{key:"gdelt_free_news_search",name:"GDELT Project",prefix:"GDELT",approved:gdeltApproved},{key:"google_news_rss",name:"Google News RSS",prefix:"Google News RSS",approved:rssApproved},{key:"searxng_self_hosted",name:"SearXNG",prefix:"SearXNG",approved:searxngApproved},{key:"tavily_search",name:"Tavily",prefix:"Tavily",approved:tavilyApproved}]){
+ const searched=await fetchNewsCandidates(queryList,{maxRecords:12,timespan:"7d",googleNewsRssEnabled:rssApproved,searxngUrl:searxngApproved?(Deno.env.get("SEARXNG_URL")||""):"",tavilyApiKey:tavilyApproved?(Deno.env.get("TAVILY_API_KEY")||""):"",braveApiKey:braveApproved?(Deno.env.get("BRAVE_SEARCH_API_KEY")||""):""});
+ for(const source of [{key:"gdelt_free_news_search",name:"GDELT Project",prefix:"GDELT",approved:gdeltApproved},{key:"google_news_rss",name:"Google News RSS",prefix:"Google News RSS",approved:rssApproved},{key:"searxng_self_hosted",name:"SearXNG",prefix:"SearXNG",approved:searxngApproved},{key:"tavily_search",name:"Tavily",prefix:"Tavily",approved:tavilyApproved},{key:"brave_public_web_search",name:"Brave Search",prefix:"Brave Search",approved:braveApproved}]){
   const used=searched.providers.includes(source.name),succeeded=searched.providerSuccesses.includes(source.name),failed=searched.errors.some((e:string)=>e.startsWith(source.prefix));
   const status=!source.approved?"disabled":failed?(succeeded?"degraded":"failed"):(succeeded?(used?"healthy":"no_results"):"not_connected");
   const notes=!source.approved?"Provider disabled or terms review/credentials incomplete":searched.errors.filter((e:string)=>e.startsWith(source.prefix)).join("; ")||(!succeeded?"Provider was not successfully reached":(used?"Provider returned results":"Provider connected; no matching results"));
