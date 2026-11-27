@@ -1,7 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 import { parseGoogleNewsRss } from "../_shared/google-news-rss.js";
-import { parseGdeltResponse } from "../_shared/gdelt-response.js";
+import { parseGdeltResponse } from "../_shared/gdelt-response.js";\nimport { saveDiscoveryCandidates } from "../_shared/discovery-candidate-processing.js";
 const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type, x-leadpilot-worker-token","Access-Control-Allow-Methods":"POST, OPTIONS"};
 const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...cors,"Content-Type":"application/json"}});
 const clean=(s:string)=>String(s||"").toLowerCase().replace(/\s+/g," ").trim().slice(0,600);
@@ -56,22 +56,7 @@ Deno.serve(async(req)=>{
       if(!rss.ok)throw new Error((fallbackReason||"GDELT returned no articles")+"; Google News RSS "+rss.status);
       articles=parseGoogleNewsRss(await rss.text());provider="Google News RSS fallback";
      }
-     for(const result of [...new Map(articles.filter((x:any)=>x.url).map((x:any)=>[x.url,x])).values()].slice(0,20)){
-      const evidence=(result.title+" — "+result.domain+" — "+result.date).slice(0,1800),txt=clean(evidence);
-      // Conservative signal policy: news/article wording is not itself buyer intent.
-      // Only explicit, first-person/request-style phrases qualify for pending review.
-      const explicitIntent=/(looking for|need a|need an|need to buy|want to buy|want to purchase|buying|purchase|hire|quote|quotation|price for|request for|seeking|can you supply|where can i buy|who can provide)/i.test(result.title||"");
-      const excludedContext=/(job opening|hiring|career|launch(ed)?|new product|review|award|festival|event|stock market|funding|investment|company profile)/i.test(result.title||"");
-      const intent=explicitIntent&&!excludedContext?"explicit":"research";
-      if(intent!=="explicit")continue;
-      const matches=[...new Set(terms)].filter((t:string)=>txt.includes(t));
-      if(matches.length===0)continue;
-      const score=Math.min(60,(intent==="explicit"?38:28)+Math.min(16,matches.length*5));
-      const payload={business_id:biz.id,run_id:runId,source_name:provider+" (free search)",source_url:result.url,evidence,intent_type:intent,signal_date:new Date().toISOString().slice(0,10),score,verification_status:"pending",dedupe_key:clean(result.url+"|"+result.title).slice(0,500)};
-      const saved=await admin.from("ai_discovery_signals").upsert(payload,{onConflict:"business_id,dedupe_key"}).select("id").single();
-      if(!saved.error)savedCount++;
-     }
-    }catch(e){externalStatus="error";errorText=e instanceof Error?e.message:String(e);}
+     const candidates=articles.map((result:any)=>({title:String(result.title||""),url:String(result.url||""),domain:String(result.domain||""),date:String(result.date||result.seendate||"")}));\n     savedCount=await saveDiscoveryCandidates({admin,businessId:biz.id,runId,candidates,terms,mode:"title_explicit",sourceName:provider+" (free search)",maxCandidates:20});\n    }catch(e){externalStatus="error";errorText=e instanceof Error?e.message:String(e);}
    }
    const completed=new Date().toISOString();
    const report={business_name:biz.name,existing_real_enquiries:leadCount||0,verified_intent_signals:verifiedCount||0,pending_search_candidates:savedCount,external_search_status:externalStatus,external_search_error:errorText,provider,queries:approved?[query]:[],note:approved?"Public news results are weak signals, not confirmed buyer intent. Data source attribution: GDELT Project and/or Google News RSS. Pending verification only.":"No external provider active; no fabricated leads or signals created."};
