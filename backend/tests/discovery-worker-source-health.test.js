@@ -16,7 +16,9 @@ test("discovery worker persists health records for providers when search is disa
 test("worker gates optional search providers by source approval and credentials",()=>{
   assert.match(worker,/googleNewsRssEnabled:rssApproved/);
   assert.match(worker,/searxngApproved\?\(Deno\.env\.get\("SEARXNG_URL"\)/);
-  assert.match(worker,/tavilyApproved\?\(Deno\.env\.get\("TAVILY_API_KEY"\)/);\n  assert.match(worker,/braveApproved\?\(Deno\.env\.get\("BRAVE_SEARCH_API_KEY"\)/);\n  assert.match(worker,/braveApiKey:braveApproved/);
+  assert.match(worker,/tavilyApproved\?\(Deno\.env\.get\("TAVILY_API_KEY"\)/);
+  assert.match(worker,/braveApproved\?\(Deno\.env\.get\("BRAVE_SEARCH_API_KEY"\)/);
+  assert.match(worker,/braveApiKey:braveApproved/);
 });
 
 
@@ -32,7 +34,9 @@ test("public intent search gates optional providers on approval and configured c
   assert.match(search,/const rssApproved=approved\("google_news_rss"\)/);
   assert.match(search,/googleNewsRssEnabled:rssApproved/);
   assert.match(search,/searxngApproved\?\(Deno\.env\.get\("SEARXNG_URL"\)/);
-  assert.match(search,/tavilyApproved\?\(Deno\.env\.get\("TAVILY_API_KEY"\)/);\n  assert.match(search,/braveApproved\?\(Deno\.env\.get\("BRAVE_SEARCH_API_KEY"\)/);\n  assert.match(search,/braveApiKey:braveApproved/);
+  assert.match(search,/tavilyApproved\?\(Deno\.env\.get\("TAVILY_API_KEY"\)/);
+  assert.match(search,/braveApproved\?\(Deno\.env\.get\("BRAVE_SEARCH_API_KEY"\)/);
+  assert.match(search,/braveApiKey:braveApproved/);
   assert.match(search,/No public search provider is enabled, terms-reviewed, and configured/);
 });
 
