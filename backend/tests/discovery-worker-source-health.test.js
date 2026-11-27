@@ -28,7 +28,7 @@ test("empty but successful fallback providers do not fail the scheduled scan",()
 
 test("public intent search gates optional providers on approval and configured credentials",async()=>{
   const search=await readFile(resolve(root,"supabase/functions/public-intent-search/index.ts"),"utf8");
-  assert.match(search,/const sourceCatalog/);
+  assert.match(search,/data:sourceCatalog/);
   assert.match(search,/const rssApproved=approved\("google_news_rss"\)/);
   assert.match(search,/googleNewsRssEnabled:rssApproved/);
   assert.match(search,/searxngApproved\?\(Deno\.env\.get\("SEARXNG_URL"\)/);
