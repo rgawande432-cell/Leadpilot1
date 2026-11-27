@@ -125,3 +125,11 @@ This document is the development guardrail: **upgrade the canonical feature inst
 - Engine Health dashboard now reads owner-scoped `ai_discovery_source_health` records and displays provider status, failure streak, last check/success and notes. (UI commit 2ccb6127; all code checks passed.)
 - Live Supabase deployment verification: `public-intent-search` v11, `leadpilot-discovery-worker` v14, `process-discovery-scan` v10 are ACTIVE.
 - Vercel preview build quota is exhausted (100 deployments/day). Current preview at commit 622531c is READY but the latest branch commit cannot be deployed until the quota resets; production project is not live.
+
+
+## Search-query coverage upgrade (2026-11-27)
+
+- Added canonical `supabase/functions/_shared/local-intent-queries.js` builder, capped at eight queries per discovery request to control free-provider load.
+- Scheduled worker and owner-triggered public intent search both use this builder, expanding category/services plus up to three configured keywords into local buyer-phrase queries (looking for, need, request quote).
+- Candidate filtering, scoring, dedupe and pending-review requirements remain unchanged; broader queries do not auto-create leads.
+- Added backend tests for query expansion, query bounds, missing category, and duplicate keyword normalization. CI/test verification is pending; this branch is not deployed to production.
