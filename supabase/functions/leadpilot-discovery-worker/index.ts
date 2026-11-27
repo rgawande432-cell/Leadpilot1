@@ -36,7 +36,8 @@ Deno.serve(async(req)=>{
     admin.from("ai_discovery_signals").select("id",{count:"exact",head:true}).eq("business_id",biz.id).eq("verification_status","verified")
    ]);
    const category=biz.niche||biz.business_type||biz.name,area=cfg.area||biz.location||"India";
-   const query='"'+category+'" "'+area+'"';\n   const searchQueries=[query,...(cfg.keywords||[]).filter(Boolean).slice(0,2).map((keyword:string)=>'"'+keyword+'" "'+area+'"')];
+   const query='"'+category+'" "'+area+'"';
+   const searchQueries=[query,...(cfg.keywords||[]).filter(Boolean).slice(0,2).map((keyword:string)=>'"'+keyword+'" "'+area+'"')];
    const terms=[biz.niche,biz.business_type,...(biz.services||[]),...(cfg.keywords||[])].filter(Boolean).map((t:string)=>String(t).toLowerCase()).filter((t:string)=>t.length>=3);
    let savedCount=0,articles:any[]=[],provider="none",externalStatus=approved?"connected":"source_disabled",errorText=approved?"":"Free news source disabled or terms review incomplete.";
    if(approved){
