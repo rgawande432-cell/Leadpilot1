@@ -81,3 +81,16 @@ test("candidate processor matches evidence using supplied keyword terms", async 
   assert.equal(saved, 1);
   assert.equal(admin.records[0].payload.business_id, "biz-4");
 });
+
+test("owner-reviewed manual candidates save without a scan run id", async () => {
+  const admin = mockAdmin();
+  const saved = await saveDiscoveryCandidates({
+    admin, businessId: "biz-manual", candidates: [
+      { title: "Looking for industrial LED fixtures", url: "https://example.com/manual", snippet: "Need industrial LED fixtures" }
+    ],
+    terms: ["industrial LED fixtures"], mode: "text_intent", sourceName: "Owner reviewed"
+  });
+  assert.equal(saved, 1);
+  assert.equal(admin.records[0].payload.run_id, null);
+  assert.equal(admin.records[0].payload.verification_status, "pending");
+});
