@@ -50,3 +50,10 @@ This document is the development guardrail: **upgrade the canonical feature inst
 - Phase 40–43 analyzes submitted enquiry patterns, prioritizes recurring topics, and produces organic-content drafts. It is separate from the lead-discovery candidate search and must not be described as a lead-generating engine.
 - Live UI content area is inline in `index.html`; phase modules above are prototypes unless an explicit runtime import/call is found.
 - Public intent search and discovery scan produce candidate signals only; owner verification remains required before treating them as genuine buyer intent or CRM leads.
+
+## Database/security audit snapshot (2026-11-27)
+
+- Live Supabase table inventory checked; all listed public tables have RLS enabled and owner-scoped policies for business data. The public-role policies on follow-ups, notifications, prospects and draft tables still include an `auth.uid()` business-owner predicate.
+- `leadpilot_engine_health` and `save_verified_intent_as_prospect` are SECURITY DEFINER RPCs, but both verify the signed-in user's ownership of the target business; the prospect RPC additionally requires a verified signal and valid HTTP(S) source URL. Supabase advisor warns because authenticated users can execute these RPCs. Keep owner checks and re-review permissions before changing.
+- Supabase Auth leaked-password protection is currently disabled; enabling it is a security hardening recommendation, not changed during this code audit.
+- Performance advisor reports 19 unused indexes. Current table sizes are very small/early-stage; do not remove indexes based only on this advisory until production query patterns are measured.
