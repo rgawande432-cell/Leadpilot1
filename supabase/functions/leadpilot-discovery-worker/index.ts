@@ -2,6 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 import { saveDiscoveryCandidates, recordDiscoverySourceHealth } from "../_shared/discovery-candidate-processing.js";
 import { fetchNewsCandidates } from "../_shared/news-search-provider.js";
+import { buildLocalIntentQueries } from "../_shared/local-intent-queries.js";
 const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type, x-leadpilot-worker-token","Access-Control-Allow-Methods":"POST, OPTIONS"};
 const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...cors,"Content-Type":"application/json"}});
 const clean=(s:string)=>String(s||"").toLowerCase().replace(/\s+/g," ").trim().slice(0,600);
@@ -36,9 +37,7 @@ Deno.serve(async(req)=>{
     admin.from("ai_discovery_signals").select("id",{count:"exact",head:true}).eq("business_id",biz.id).eq("verification_status","verified")
    ]);
    const category=biz.niche||biz.business_type||biz.name,area=cfg.area||biz.location||"India";
-   const query='"'+category+'" "'+area+'"';
-   const keywordQueries=(cfg.keywords||[]).filter(Boolean).slice(0,1).flatMap((keyword:string)=>['"'+keyword+'" "'+area+'" "looking for"','"'+keyword+'" "'+area+'" "request quote"']);
-   const searchQueries=[query,...keywordQueries];
+   const searchQueries=buildLocalIntentQueries({niche:biz.niche,businessType:biz.business_type,businessName:biz.name,services:biz.services||[],area,keywords:cfg.keywords||[],maxQueries:8});
    const terms=[biz.niche,biz.business_type,...(biz.services||[]),...(cfg.keywords||[])].filter(Boolean).map((t:string)=>String(t).toLowerCase()).filter((t:string)=>t.length>=3);
    let savedCount=0,articles:any[]=[],provider="none",externalStatus=approved?"connected":"source_disabled",errorText=approved?"":"Free news source disabled or terms review incomplete.";
    if(approved){
