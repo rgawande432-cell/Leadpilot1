@@ -2,6 +2,7 @@
 // These are search phrases only; results remain candidates until owner-reviewed.
 const clean = (value) => String(value || "").replace(/["\\\\]/g, " ").replace(/\s+/g, " ").trim();
 
+/** @param {{niche?:string,businessType?:string,businessName?:string,services?:string[],area?:string,keywords?:string[],maxQueries?:number}} options */
 export function buildLocalIntentQueries({ niche, businessType, businessName, services = [], area, keywords = [], maxQueries = 8 } = {}) {
   const category = clean(niche || businessType || businessName);
   const location = clean(area || "India");
