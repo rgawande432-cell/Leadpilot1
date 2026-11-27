@@ -1,7 +1,7 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";\nimport { saveDiscoveryCandidates } from "../_shared/discovery-candidate-processing.js";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { saveDiscoveryCandidates } from "../_shared/discovery-candidate-processing.js";
 const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type","Access-Control-Allow-Methods":"POST, OPTIONS"};
 const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...cors,"Content-Type":"application/json"}});
-const dedupe=(s:string)=>s.toLowerCase().replace(/\s+/g," ").slice(0,500);
 Deno.serve(async(req)=>{
  if(req.method==="OPTIONS")return new Response("ok",{headers:cors});
  if(req.method!=="POST")return json({error:"POST required"},405);
