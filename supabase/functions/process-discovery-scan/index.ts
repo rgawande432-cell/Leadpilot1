@@ -49,7 +49,8 @@ Deno.serve(async(req)=>{
    }
    const terms=[business.niche,business.business_type,...(business.services||[]),...(cfg.keywords||[])].filter(Boolean);
    candidates=await saveDiscoveryCandidates({admin,businessId,runId:run.id,candidates:results,terms,mode:"text_intent",sourceName:"Brave Search",maxCandidates:25});
-   externalStatus="connected"; 
+   externalStatus="connected";
+   await recordDiscoverySourceHealth({admin,businessId,sourceKey:"brave_public_web_search",status:results.length?"healthy":"no_results",successful:successfulRequests>0,notes:results.length?"Brave Search returned public candidates":"Brave Search connected but no matching results"});
   }catch(e){externalStatus="error";externalError=e instanceof Error?e.message:String(e);await recordDiscoverySourceHealth({admin,businessId,sourceKey:"brave_public_web_search",status:"failed",successful:false,notes:externalError});}
  }
  const completed=new Date().toISOString();
