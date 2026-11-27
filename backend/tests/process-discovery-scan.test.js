@@ -16,7 +16,7 @@ test("Brave scan uses fresh India-targeted buyer-intent query set",()=>{
   assert.match(scan,/country","IN"/);
   assert.match(scan,/freshness","pw"/);
   assert.match(scan,/count","8"/);
-  assert.match(scan,/result_filter","web"/);
+  assert.match(scan,/result_filter","web,discussions"/);
 });
 
 test("Brave search remains approval and credential gated",()=>{
