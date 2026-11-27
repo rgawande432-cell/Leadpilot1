@@ -34,12 +34,20 @@ test("shared news adapter falls back to Google News RSS when GDELT is empty", as
   assert.deepEqual(result.providers, ["Google News RSS"]);
 });
 
-test("adapter deduplicates article links across query runs and reports provider errors", async () => {
+test("adapter deduplicates links and stops GDELT after rate limit", async () => {
+  const gdeltCalls = [];
+  const rssCalls = [];
   const fetcher = async (url) => {
-    if (String(url).includes("api.gdeltproject.org")) return new Response("rate limited", { status: 429 });
+    if (String(url).includes("api.gdeltproject.org")) {
+      gdeltCalls.push(String(url));
+      return new Response("rate limited", { status: 429 });
+    }
+    rssCalls.push(String(url));
     return new Response('<rss><item><title>Same article</title><link>https://example.com/same</link></item></rss>', { status: 200 });
   };
   const result = await fetchNewsCandidates(["first", "second"], { fetcher });
+  assert.equal(gdeltCalls.length, 1);
+  assert.equal(rssCalls.length, 2);
   assert.equal(result.results.length, 1);
   assert.equal(result.providers.length, 1);
   assert.deepEqual(result.providers, ["Google News RSS"]);
