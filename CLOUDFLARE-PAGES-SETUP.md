@@ -1,27 +1,26 @@
-# Cloudflare Pages deployment guide — UrbanLeads
+# Cloudflare deployment and custom-domain guide — UrbanLeads
 
-## Project
+## Current production deployment
+- Cloudflare Worker: `leadpilot1`
+- Current live URL: https://leadpilot1.rgawande432.workers.dev/
 - Git repository: rgawande432-cell/Leadpilot1
 - Production branch: main
-- Framework preset: None / Static HTML
-- Build command: mkdir -p dist && cp index.html dist/index.html
-- Build output directory: dist
-- Root directory: /
-- Environment variables: none required for static hosting
-- First deployment URL: use the assigned .pages.dev URL
+- Supabase database and Edge Functions remain hosted separately.
 
-## Important
-- Do not connect urbanbuying.com; it belongs to a separate business website.
-- After the first Pages URL is assigned, update canonical URLs, sitemap, robots.txt and Open Graph/structured-data hostnames to that URL before submitting SEO to search engines.
-- Current repository's dist/ includes SEO landing pages, robots and sitemap; the build command copies the latest homepage while preserving these tracked files.
-- Supabase-backed features remain hosted separately; static hosting does not move the database or Edge Functions.
-- Never add Supabase service-role secrets to the static build.
-- Cloudflare account/GitHub authorization is a user-side connection step; this guide does not claim the project is deployed.
+## Git-based deployment
+The Worker is already deployed and reachable at the workers.dev URL above. To make future GitHub commits deploy automatically, connect the existing Worker to the GitHub repository from the Worker dashboard's Builds / Git integration settings if that capability is available for this Worker. Do not create a replacement Worker or overwrite the existing production service. Verify a new deployment after connecting.
 
-## Setup steps
-1. Open Cloudflare Dashboard > Workers & Pages > Create > Pages > Connect to Git.
-2. Authorize GitHub if requested and select rgawande432-cell/Leadpilot1.
-3. Choose main as production branch.
-4. Set the build command and output directory above.
-5. Save and deploy.
-6. Share or note the generated pages.dev URL for verification.
+## Custom domain
+The intended primary hostname is `urbanbuying.com`, with `www.urbanbuying.com` configured only after the apex domain is working.
+1. Confirm the Cloudflare zone `urbanbuying.com` is Active.
+2. In the existing Worker `leadpilot1`, open Settings → Domains & Routes.
+3. Add a Custom Domain for `urbanbuying.com`. Cloudflare should provision the DNS record and TLS certificate automatically.
+4. If the Custom Domain action is missing or reports a DNS conflict, do not delete additional records blindly. Inspect all DNS records for the exact apex hostname, and preserve MX/TXT records used for email and verification.
+5. After the apex hostname is verified, add `www.urbanbuying.com` as a second custom domain or configure an explicit redirect to the apex.
+6. Verify HTTPS, homepage, auth, public enquiry intake, and Supabase connectivity on the custom hostname before changing SEO canonical URLs.
+
+## Safety
+- Never expose Supabase service-role keys in static assets or browser code.
+- Keep the current workers.dev URL available until the custom domain has passed smoke tests.
+- Do not describe the custom domain as live until HTTPS and the app have been tested.
+- Do not assume GitHub commits auto-deploy until the Worker build integration has been verified.
