@@ -37,7 +37,7 @@ This document is the development guardrail: **upgrade the canonical feature inst
 - [x] Added regression tests for these consolidations.
 - [x] Consolidated common discovery candidate filtering, intent classification, term matching, scoring, dedupe and pending-signal persistence into one shared processor; scheduled and owner-triggered paths use it.
 - [ ] Complete full UI/API/DB ownership audit and review all disconnected phase modules before future feature additions.
-- [ ] Verify Supabase Edge Function type-check and PR CI; the latest Deno validation currently reports failure and must be diagnosed before considering this refactor complete.
+- [x] Latest CI for the discovery consolidation head passed backend lead-processing tests, Phase 40–43 regressions, and inline JS/Supabase function validation. Earlier transient failure was corrected and rerun successfully.
 
 ## Required workflow for future changes
 
@@ -61,3 +61,12 @@ This document is the development guardrail: **upgrade the canonical feature inst
 - `leadpilot_engine_health` and `save_verified_intent_as_prospect` are SECURITY DEFINER RPCs, but both verify the signed-in user's ownership of the target business; the prospect RPC additionally requires a verified signal and valid HTTP(S) source URL. Supabase advisor warns because authenticated users can execute these RPCs. Keep owner checks and re-review permissions before changing.
 - Supabase Auth leaked-password protection is currently disabled; enabling it is a security hardening recommendation, not changed during this code audit.
 - Performance advisor reports 19 unused indexes. Current table sizes are very small/early-stage; do not remove indexes based only on this advisory until production query patterns are measured.
+
+## Live discovery operation snapshot (2026-11-27)
+
+- Cron workers are active: queue worker every 5 minutes; due-scan enqueue every 30 minutes; retry scan every 10 minutes; follow-up reminders every 15 minutes; rate-limit cleanup daily.
+- Source catalog: GDELT/Google News fallback and manual verified signals are enabled; Brave API, opt-in channels and third-party integrations remain disabled pending credentials/terms review.
+- Recent runs returned zero pending candidate signals. Two earlier GDELT runs failed with HTTP 429 and an unexpected response; RSS fallback ran but returned zero saved signals. This is a genuine coverage/provider reliability gap, not a lead-generation success.
+- Owner-triggered scan matching previously omitted configured discovery keywords. It now includes `cfg.keywords` in candidate term matching; scheduled path already did so.
+- Do not claim guaranteed lead counts. Public articles are weak candidate signals; genuine enquiries are separate and only become prospects/CRM leads after owner verification or consent-based direct enquiry.
+
