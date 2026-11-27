@@ -39,6 +39,9 @@ export async function fetchNewsCandidates(queries = [], options = {}) {
       if (response.ok) {
         const parsed = parseGdeltResponse(await response.text());
         articles = parsed.articles;
+        if (!articles.length && parsed.fallbackReason) errors.push("GDELT: " + parsed.fallbackReason);
+      } else {
+        errors.push("GDELT HTTP " + response.status);
       }
       if (articles.length) providers.add("GDELT Project");
     } catch (error) {
