@@ -57,7 +57,9 @@ Deno.serve(async(req)=>{
       if(!rss.ok)throw new Error((fallbackReason||"GDELT returned no articles")+"; Google News RSS "+rss.status);
       articles=parseGoogleNewsRss(await rss.text());provider="Google News RSS fallback";
      }
-     const candidates=articles.map((result:any)=>({title:String(result.title||""),url:String(result.url||""),domain:String(result.domain||""),date:String(result.date||result.seendate||"")}));\n     savedCount=await saveDiscoveryCandidates({admin,businessId:biz.id,runId,candidates,terms,mode:"title_explicit",sourceName:provider+" (free search)",maxCandidates:20});\n    }catch(e){externalStatus="error";errorText=e instanceof Error?e.message:String(e);}
+     const candidates=articles.map((result:any)=>({title:String(result.title||""),url:String(result.url||""),domain:String(result.domain||""),date:String(result.date||result.seendate||"")}));
+     savedCount=await saveDiscoveryCandidates({admin,businessId:biz.id,runId,candidates,terms,mode:"title_explicit",sourceName:provider+" (free search)",maxCandidates:20});
+    }catch(e){externalStatus="error";errorText=e instanceof Error?e.message:String(e);}
    }
    const completed=new Date().toISOString();
    const report={business_name:biz.name,existing_real_enquiries:leadCount||0,verified_intent_signals:verifiedCount||0,pending_search_candidates:savedCount,external_search_status:externalStatus,external_search_error:errorText,provider,queries:approved?[query]:[],note:approved?"Public news results are weak signals, not confirmed buyer intent. Data source attribution: GDELT Project and/or Google News RSS. Pending verification only.":"No external provider active; no fabricated leads or signals created."};
