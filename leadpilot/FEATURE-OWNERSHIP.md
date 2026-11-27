@@ -49,7 +49,7 @@ This document is the development guardrail: **upgrade the canonical feature inst
 | Dashboard/analytics | Derived from real `leads` records | Live; no synthetic lead counts |
 | AI discovery activation and queue | `ai_discovery_configs`, `ai_discovery_jobs`, `ai_discovery_runs` | Live scheduler; source reliability currently limited |
 | Public intent search and review | `public-intent-search` + shared candidate processor + `ai_discovery_signals` | Search candidate → owner review; no contact scraping |
-| Verified public prospects | `leadpilot_public_prospects` + `save_verified_intent_as_prospect` RPC | Contact data is not auto-invented |
+| Verified public prospects | `leadpilot_public_prospects` + `save_verified_intent_as_prospect` RPC | Owner records contact details only after independent verification; contact-verified status requires a contact and verification source |
 | Content Studio | `content-generation` Edge Function + `leadpilot_content_drafts` | AI requires provider key; templates remain available |
 | Campaign Planner | `leadpilot_campaign_drafts` | Persisted in database; copy corrected |
 | Follow-up Planner | `leadpilot_followups` + reminder cron/notifications | Live |
@@ -93,3 +93,10 @@ This document is the development guardrail: **upgrade the canonical feature inst
 - Public search candidate save previously duplicated intent classification, keyword matching, scoring and dedupe logic in the inline UI. That path now submits the selected candidate to the authenticated `public-intent-search` Edge Function in save mode; canonical shared processing handles relevance, score, dedupe and pending status.
 - Manual saves can be associated with no scan run (run_id is null) while retaining business-scoped dedupe and pending-verification status. Regression tests cover this behavior.
 - Campaign Planner drafts were already persisted to `leadpilot_campaign_drafts`; only its UI description incorrectly claimed browser-only storage. The copy now reflects workspace database persistence.
+
+## Verified-prospect contact workflow upgrade (2026-11-27)
+
+- Existing public prospect records previously allowed a contact-verified status without storing any phone/email or verification source.
+- New migration adds contact name, phone, email, verification timestamp, verifier user id, source and notes. Database check constraints require contact data and verification source/timestamp before a record can be marked contact-verified.
+- UI now supports owner-entered contact verification, editing verified details, searching by contact fields, and exporting the saved contact fields. Contact information is owner-scoped; no scraping or auto-filling of contacts is added.
+- Migration is committed in the PR but not applied to production Supabase. Apply only after review/merge and verify the migration on the intended environment.
