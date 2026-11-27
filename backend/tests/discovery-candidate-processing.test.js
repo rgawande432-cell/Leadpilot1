@@ -171,3 +171,22 @@ test("candidate save limit is bounded and only processes the configured first ca
   assert.equal(saved, 2);
   assert.equal(admin.records.length, 2);
 });
+
+test("future-dated evidence does not receive a freshness bonus", async () => {
+  const futureAdmin = mockAdmin();
+  const staleAdmin = mockAdmin();
+  const future = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+  const futureSaved = await saveDiscoveryCandidates({
+    admin: futureAdmin, businessId: "biz-future",
+    candidates: [{ title: "Looking for furniture supplier", url: "https://example.com/future", snippet: "Need furniture", date: future }],
+    terms: ["furniture"], mode: "text_intent"
+  });
+  const staleSaved = await saveDiscoveryCandidates({
+    admin: staleAdmin, businessId: "biz-stale-compare",
+    candidates: [{ title: "Looking for furniture supplier", url: "https://example.com/stale-compare", snippet: "Need furniture", date: "2020-01-01" }],
+    terms: ["furniture"], mode: "text_intent"
+  });
+  assert.equal(futureSaved, 1);
+  assert.equal(staleSaved, 1);
+  assert.equal(futureAdmin.records[0].payload.score, staleAdmin.records[0].payload.score);
+});
