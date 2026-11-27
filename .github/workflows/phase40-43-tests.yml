@@ -1,0 +1,22 @@
+name: LeadPilot Phase 40-43 Regression Tests
+
+on:
+  push:
+    paths:
+      - "leadpilot/phase40-43/**"
+      - ".github/workflows/phase40-43-tests.yml"
+  pull_request:
+    paths:
+      - "leadpilot/phase40-43/**"
+      - ".github/workflows/phase40-43-tests.yml"
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Run Phase 40-43 tests
+        run: node --test leadpilot/phase40-43/organic-content-workflow.test.cjs

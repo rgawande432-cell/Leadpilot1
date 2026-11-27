@@ -1,3 +1,4 @@
+// Shared defensive parser for GDELT Project article-list JSON.
 export function parseGdeltResponse(body) {
   try {
     const data = JSON.parse(String(body ?? ""));

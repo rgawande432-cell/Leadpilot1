@@ -1,10 +1,11 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+import { saveDiscoveryCandidates, recordDiscoverySourceHealth } from "../_shared/discovery-candidate-processing.js";
+import { fetchNewsCandidates } from "../_shared/news-search-provider.js";
 const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type, x-leadpilot-worker-token","Access-Control-Allow-Methods":"POST, OPTIONS"};
 const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...cors,"Content-Type":"application/json"}});
 const clean=(s:string)=>String(s||"").toLowerCase().replace(/\s+/g," ").trim().slice(0,600);
-const xmlDecode=(s:string)=>s.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g,"$1").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#39;/g,"'");
-const parseRss=(xml:string)=>[...xml.matchAll(/<item\b[^>]*>([\s\S]*?)<\/item>/gi)].map(m=>{const text=m[1];const field=(tag:string)=>xmlDecode((text.match(new RegExp("<"+tag+"[^>]*>([\\s\\S]*?)<\\/"+tag+">","i"))||[])[1]||"").trim();return {title:field("title"),url:field("link"),date:field("pubDate"),domain:"Google News RSS"};}).filter(x=>x.title&&x.url);
+
 Deno.serve(async(req)=>{
  if(req.method==="OPTIONS")return new Response("ok",{headers:cors});
  if(req.method!=="POST")return json({error:"POST required"},405);
@@ -36,41 +37,25 @@ Deno.serve(async(req)=>{
    ]);
    const category=biz.niche||biz.business_type||biz.name,area=cfg.area||biz.location||"India";
    const query='"'+category+'" "'+area+'"';
+   const keywordQueries=(cfg.keywords||[]).filter(Boolean).slice(0,1).flatMap((keyword:string)=>['"'+keyword+'" "'+area+'" "looking for"','"'+keyword+'" "'+area+'" "request quote"']);
+   const searchQueries=[query,...keywordQueries];
    const terms=[biz.niche,biz.business_type,...(biz.services||[]),...(cfg.keywords||[])].filter(Boolean).map((t:string)=>String(t).toLowerCase()).filter((t:string)=>t.length>=3);
    let savedCount=0,articles:any[]=[],provider="none",externalStatus=approved?"connected":"source_disabled",errorText=approved?"":"Free news source disabled or terms review incomplete.";
    if(approved){
     try{
-     const endpoint=new URL("https://api.gdeltproject.org/api/v2/doc/doc");
-     endpoint.searchParams.set("query",query);endpoint.searchParams.set("mode","ArtList");endpoint.searchParams.set("format","json");endpoint.searchParams.set("maxrecords","20");endpoint.searchParams.set("timespan","7d");endpoint.searchParams.set("sort","DateDesc");
-     const response=await fetch(endpoint,{headers:{"Accept":"application/json"}});
-     let fallbackReason="";
-     if(response.ok){
-      const raw=await response.text();
-      try{const data=JSON.parse(raw);if(Array.isArray(data.articles)){articles=data.articles.map((x:any)=>({title:x.title||"",url:x.url||"",domain:x.domain||"",date:x.seendate||""}));provider="GDELT Project";}else fallbackReason="GDELT returned HTTP 200 without article data";}
-      catch{fallbackReason="GDELT returned HTTP 200 with non-JSON content";}
-     }else if(response.status===429||response.status>=500)fallbackReason="GDELT HTTP "+response.status;
-     else throw new Error("GDELT HTTP "+response.status);
-     if(fallbackReason||!articles.length){
-      const rssUrl=new URL("https://news.google.com/rss/search");rssUrl.searchParams.set("q",query+" when:7d");rssUrl.searchParams.set("hl","en-IN");rssUrl.searchParams.set("gl","IN");rssUrl.searchParams.set("ceid","IN:en");
-      const rss=await fetch(rssUrl,{headers:{"Accept":"application/rss+xml, application/xml, text/xml"}});
-      if(!rss.ok)throw new Error((fallbackReason||"GDELT returned no articles")+"; Google News RSS "+rss.status);
-      articles=parseRss(await rss.text());provider="Google News RSS fallback";
+     const search=await fetchNewsCandidates(searchQueries,{maxRecords:20,timespan:"7d"});
+     for(const source of [{key:"gdelt_free_news_search",name:"GDELT Project",prefix:"GDELT"},{key:"google_news_rss",name:"Google News RSS",prefix:"Google News RSS"}]){
+      const used=search.providers.includes(source.name),failed=search.errors.some((e:string)=>e.startsWith(source.prefix));
+      await recordDiscoverySourceHealth({admin,businessId:biz.id,sourceKey:source.key,status:failed?(used?"degraded":"failed"):(used?"healthy":"no_results"),successful:used||!failed,notes:search.errors.filter((e:string)=>e.startsWith(source.prefix)).join("; ")||(!used?"No matching articles in search window":"Provider returned articles")});
      }
-     for(const result of [...new Map(articles.filter((x:any)=>x.url).map((x:any)=>[x.url,x])).values()].slice(0,20)){
-      const evidence=(result.title+" — "+result.domain+" — "+result.date).slice(0,1800),txt=clean(evidence);
-      const intent=/(looking for|need a|need an|want to buy|buying|purchase|hire|quote|quotation|price for|available for|request for|seeking)/i.test(txt)?"explicit":/(which|where|recommend|suggest|anyone know|how much|best|options|can anyone|who provides)/i.test(txt)?"question":"research";
-      if(intent==="research")continue;
-      const matches=[...new Set(terms)].filter((t:string)=>txt.includes(t));
-      if(matches.length===0)continue;
-      const score=Math.min(60,(intent==="explicit"?38:28)+Math.min(16,matches.length*5));
-      const payload={business_id:biz.id,run_id:runId,source_name:provider+" (free search)",source_url:result.url,evidence,intent_type:intent,signal_date:new Date().toISOString().slice(0,10),score,verification_status:"pending",dedupe_key:clean(result.url+"|"+result.title).slice(0,500)};
-      const saved=await admin.from("ai_discovery_signals").upsert(payload,{onConflict:"business_id,dedupe_key"}).select("id").single();
-      if(!saved.error)savedCount++;
-     }
+     articles=search.results;provider=search.providers.join(" + ")||"none";
+     if(!articles.length&&search.errors.length)throw new Error(search.errors.join("; "));
+     const candidates=articles.map((result:any)=>({title:String(result.title||""),url:String(result.url||""),domain:String(result.domain||""),date:String(result.date||"")}));
+     savedCount=await saveDiscoveryCandidates({admin,businessId:biz.id,runId:runId as string,candidates,terms,mode:"title_explicit",sourceName:provider+" (free search)",maxCandidates:20});
     }catch(e){externalStatus="error";errorText=e instanceof Error?e.message:String(e);}
    }
    const completed=new Date().toISOString();
-   const report={business_name:biz.name,existing_real_enquiries:leadCount||0,verified_intent_signals:verifiedCount||0,pending_search_candidates:savedCount,external_search_status:externalStatus,external_search_error:errorText,provider,queries:approved?[query]:[],note:approved?"Public news results are weak signals, not confirmed buyer intent. Data source attribution: GDELT Project and/or Google News RSS. Pending verification only.":"No external provider active; no fabricated leads or signals created."};
+   const report={business_name:biz.name,existing_real_enquiries:leadCount||0,verified_intent_signals:verifiedCount||0,pending_search_candidates:savedCount,external_search_status:externalStatus,external_search_error:errorText,provider,queries:approved?searchQueries:[],note:approved?"Public news results are weak signals, not confirmed buyer intent. Data source attribution: GDELT Project and/or Google News RSS. Pending verification only.":"No external provider active; no fabricated leads or signals created."};
    await admin.from("ai_discovery_runs").update({status:externalStatus==="error"?"failed":"completed",completed_at:completed,signals_found:savedCount,leads_created:0,source_name:provider||"Scheduled internal check",error_summary:errorText||report.note}).eq("id",runId);
    await admin.from("ai_discovery_jobs").update({status:externalStatus==="error"?"failed":"completed",completed_at:completed,next_retry_at:externalStatus==="error"?new Date(Date.now()+Math.min(60,10*(job.attempts||1))*60000).toISOString():null,error_message:errorText||null,metadata:{...(job.metadata||{}),report}}).eq("id",job.id);
    reports.push({job_id:job.id,run_id:runId,report});

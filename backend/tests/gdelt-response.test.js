@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseGdeltResponse } from "../../supabase/functions/leadpilot-discovery-worker/gdelt-response.js";
+import { parseGdeltResponse } from "../../supabase/functions/_shared/gdelt-response.js";
 
 test("accepts valid GDELT article JSON", () => {
   const result = parseGdeltResponse(JSON.stringify({ articles: [{ title: "Title", url: "https://example.com/a", domain: "example.com", seendate: "20261126" }] }));

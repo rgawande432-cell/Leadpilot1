@@ -37,15 +37,6 @@ const INTENT_RULES = [
     angle: "Help customers compare options and choose based on their needs."
   },
   {
-    intent: "availability",
-    keywords: [
-      "available", "availability", "stock", "booking",
-      "appointment", "ready", "उपलब्ध", "स्टॉक"
-    ],
-    topic: "Availability and buying process",
-    angle: "Explain availability, booking, and the next steps."
-  },
-  {
     intent: "trust",
     keywords: [
       "review", "reviews", "feedback", "warranty",
@@ -53,6 +44,15 @@ const INTENT_RULES = [
     ],
     topic: "Trust, customer experience, and service assurance",
     angle: "Share verified service details, customer FAQs, and trust-building information."
+  },
+  {
+    intent: "availability",
+    keywords: [
+      "available", "availability", "stock", "booking",
+      "appointment", "ready", "उपलब्ध", "स्टॉक"
+    ],
+    topic: "Availability and buying process",
+    angle: "Explain availability, booking, and the next steps."
   }
 ];
 

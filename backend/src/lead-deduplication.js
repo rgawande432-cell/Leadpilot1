@@ -13,7 +13,7 @@ export function findDuplicateLead(newLead = {}, existingLeads = []) {
   const businessId = String(newLead.businessId || "");
 
   if (!businessId) {
-    return { duplicate: false, reason: "Business ID is required for duplicate checking" };
+    return { duplicate: false, matchedBy: null, reason: "Business ID is required for duplicate checking" };
   }
 
   const match = existingLeads.find(existing => {
@@ -25,10 +25,11 @@ export function findDuplicateLead(newLead = {}, existingLeads = []) {
     return phoneMatch || emailMatch;
   });
 
-  if (!match) return { duplicate: false, reason: "No matching lead found" };
+  if (!match) return { duplicate: false, matchedBy: null, reason: "No matching lead found" };
   return {
     duplicate: true,
     matchedLeadId: match.id || null,
+    matchedBy: newEmail && normalizeEmail(match.email) === newEmail ? "email" : "phone",
     reason: "Matching phone number or email found for this business"
   };
 }
