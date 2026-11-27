@@ -161,3 +161,34 @@ test("rate-limited primary source can still be a completed scan when RSS succeed
   assert.deepEqual(result.providerSuccesses,["Google News RSS"]);
   assert.match(result.errors[0],/GDELT HTTP 429/);
 });
+
+test("Brave Search fallback returns normalized public candidates and uses API-key header",async()=>{
+  const calls=[];
+  const fetcher=async(url,init={})=>{
+    calls.push({url:String(url),init});
+    if(String(url).includes("api.gdeltproject.org"))return new Response(JSON.stringify({articles:[]}),{status:200});
+    if(String(url).includes("api.search.brave.com"))return new Response(JSON.stringify({web:{results:[{title:"Looking for a supplier",url:"https://example.com/buyer",description:"Need a local supplier",page_age:"2026-11-27"}]}}),{status:200});
+    throw new Error("RSS should not be called when Brave returns results");
+  };
+  const result=await fetchNewsCandidates(["buyer intent Pune"],{fetcher,braveApiKey:"brave-test",googleNewsRssEnabled:true});
+  assert.equal(result.results.length,1);
+  assert.equal(result.results[0].title,"Looking for a supplier");
+  assert.deepEqual(result.providers,["Brave Search"]);
+  assert.deepEqual(result.providerSuccesses,["GDELT Project","Brave Search"]);
+  const request=calls.find(x=>x.url.includes("api.search.brave.com"));
+  assert.equal(request.init.headers["X-Subscription-Token"],"brave-test");
+  assert.match(request.url,/country=IN/);
+  assert.match(request.url,/freshness=pw/);
+});
+
+test("Brave Search is not called without an approved API key passed to the adapter",async()=>{
+  const calls=[];
+  const fetcher=async(url)=>{
+    calls.push(String(url));
+    if(String(url).includes("api.gdeltproject.org"))return new Response(JSON.stringify({articles:[]}),{status:200});
+    return new Response("<rss><channel></channel></rss>",{status:200});
+  };
+  const result=await fetchNewsCandidates(["buyer intent"],{fetcher,googleNewsRssEnabled:false});
+  assert.equal(calls.some(x=>x.includes("api.search.brave.com")),false);
+  assert.deepEqual(result.results,[]);
+});
