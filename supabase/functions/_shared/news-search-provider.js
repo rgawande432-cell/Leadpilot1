@@ -23,29 +23,33 @@ export async function fetchNewsCandidates(queries = [], options = {}) {
   const ceid = options.ceid || "IN:en";
   const results = [];
   const providers = new Set();
-  const errors = [];\n  let gdeltRateLimited = false;
+  const errors = [];
+  let gdeltRateLimited = false;
 
   for (const query of [...new Set(queries.filter(Boolean).map(String))]) {
     let articles = [];
-    const endpoint = new URL("https://api.gdeltproject.org/api/v2/doc/doc");
-    endpoint.searchParams.set("query", query);
-    endpoint.searchParams.set("mode", "ArtList");
-    endpoint.searchParams.set("format", "json");
-    endpoint.searchParams.set("maxrecords", String(maxRecords));
-    endpoint.searchParams.set("timespan", timespan);
-    endpoint.searchParams.set("sort", "DateDesc");
-    try {
-      const response = await fetcher(endpoint, { headers: { Accept: "application/json" } });
-      if (response.ok) {
-        const parsed = parseGdeltResponse(await response.text());
-        articles = parsed.articles;
-        if (!articles.length && parsed.fallbackReason) errors.push("GDELT: " + parsed.fallbackReason);
-      } else {
-        errors.push("GDELT HTTP " + response.status);
+    if (!gdeltRateLimited) {
+      const endpoint = new URL("https://api.gdeltproject.org/api/v2/doc/doc");
+      endpoint.searchParams.set("query", query);
+      endpoint.searchParams.set("mode", "ArtList");
+      endpoint.searchParams.set("format", "json");
+      endpoint.searchParams.set("maxrecords", String(maxRecords));
+      endpoint.searchParams.set("timespan", timespan);
+      endpoint.searchParams.set("sort", "DateDesc");
+      try {
+        const response = await fetcher(endpoint, { headers: { Accept: "application/json" } });
+        if (response.ok) {
+          const parsed = parseGdeltResponse(await response.text());
+          articles = parsed.articles;
+          if (!articles.length && parsed.fallbackReason) errors.push("GDELT: " + parsed.fallbackReason);
+        } else {
+          errors.push("GDELT HTTP " + response.status);
+          if (response.status === 429) gdeltRateLimited = true;
+        }
+        if (articles.length) providers.add("GDELT Project");
+      } catch (error) {
+        errors.push("GDELT: " + (error instanceof Error ? error.message : String(error)));
       }
-      if (articles.length) providers.add("GDELT Project");
-    } catch (error) {
-      errors.push("GDELT: " + (error instanceof Error ? error.message : String(error)));
     }
 
     if (!articles.length) {
