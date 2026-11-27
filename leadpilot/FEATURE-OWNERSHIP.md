@@ -133,3 +133,11 @@ This document is the development guardrail: **upgrade the canonical feature inst
 - Scheduled worker and owner-triggered public intent search both use this builder, expanding category/services plus up to three configured keywords into local buyer-phrase queries (looking for, need, request quote).
 - Candidate filtering, scoring, dedupe and pending-review requirements remain unchanged; broader queries do not auto-create leads.
 - Added backend tests for query expansion, query bounds, missing category, and duplicate keyword normalization. CI/test verification is pending; this branch is not deployed to production.
+
+
+## Rate-limit resilience / optional SearXNG (2026-11-27)
+
+- Public discovery now supports an optional self-hosted SearXNG fallback after GDELT and Google News RSS.
+- Configure Supabase Edge Function secret `SEARXNG_URL` with the base URL of a private/owned SearXNG instance that has JSON output enabled. No public shared instance is hard-coded.
+- SearXNG is optional; without the secret the existing providers run unchanged. It is free software, but the operator still pays for hosting and upstream engines can rate-limit/block; this is not unlimited guaranteed search.
+- Candidate review, relevance scoring, deduplication, source attribution and verification rules remain in place. CI/deployment validation is pending.
