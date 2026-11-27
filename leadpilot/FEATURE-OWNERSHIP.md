@@ -49,7 +49,7 @@ This document is the development guardrail: **upgrade the canonical feature inst
 | Dashboard/analytics | Derived from real `leads` records | Live; no synthetic lead counts |
 | AI discovery activation and queue | `ai_discovery_configs`, `ai_discovery_jobs`, `ai_discovery_runs` | Live scheduler; source reliability currently limited |
 | Public intent search and review | `public-intent-search` + shared candidate processor + `ai_discovery_signals` | Search candidate → owner review; no contact scraping |
-| Verified public prospects | `leadpilot_public_prospects` + `save_verified_intent_as_prospect` RPC | Owner records contact details only after independent verification; contact-verified status requires a contact and verification source |
+| Verified public prospects | `leadpilot_public_prospects` + `save_verified_intent_as_prospect` RPC + `convert_verified_prospect_to_lead` RPC | Owner records contact details only after independent verification; owner-confirmed conversion to CRM is idempotent and carries no direct enquiry consent |
 | Content Studio | `content-generation` Edge Function + `leadpilot_content_drafts` | AI requires provider key; templates remain available |
 | Campaign Planner | `leadpilot_campaign_drafts` | Persisted in database; copy corrected |
 | Follow-up Planner | `leadpilot_followups` + reminder cron/notifications | Live |
@@ -100,3 +100,9 @@ This document is the development guardrail: **upgrade the canonical feature inst
 - New migration adds contact name, phone, email, verification timestamp, verifier user id, source and notes. Database check constraints require contact data and verification source/timestamp before a record can be marked contact-verified.
 - UI now supports owner-entered contact verification, editing verified details, searching by contact fields, and exporting the saved contact fields. Contact information is owner-scoped; no scraping or auto-filling of contacts is added.
 - Migration is committed in the PR but not applied to production Supabase. Apply only after review/merge and verify the migration on the intended environment.
+
+## Owner-confirmed prospect to CRM conversion (2026-11-27)
+
+- Contact-verified prospects can now be manually converted to CRM records. Conversion is owner-confirmed and idempotent via the new RPC, locks the prospect row, validates owner, contact verification and verified signal, and stores the prospect-to-lead link.
+- Converted CRM records are labeled as public intent prospects and explicitly state that direct enquiry consent was not recorded. Do not use this as a consent bypass or fabricate a direct enquiry.
+- Both conversion/contact migrations are PR-only and have not been applied to live Supabase.
