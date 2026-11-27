@@ -34,6 +34,7 @@ p{color:#65738b;line-height:1.6}
 input,textarea,select{width:100%;padding:12px;border:1px solid #d5deeb;border-radius:9px;font:inherit}
 textarea{min-height:80px}
 .actions{display:flex;gap:10px;flex-wrap:wrap;margin:15px 0}
+.password-wrap{display:flex;gap:8px;align-items:stretch}.password-wrap input{flex:1;min-width:0}.password-wrap .btn{white-space:nowrap}
 .row{border-bottom:1px solid #e6ebf3;padding:13px 0}
 .pill{font-size:12px;background:#edf2ff;color:#2457d6;padding:5px 9px;border-radius:18px}
 .small{color:#7b879a;font-size:12px}
@@ -163,11 +164,12 @@ footer{margin-top:45px;border-top:1px solid #e1e7f0;padding:25px 0;color:#7b879a
 <div class="box">
 <div class="bar"><h2 id="authHeading">Create account</h2><button class="btn alt" id="closeAuth">Close</button></div>
 <p>Use your email and password to access your workspace.</p>
-<div class="field"><label>Email</label><input id="email" type="email" autocomplete="email"></div>
-<div class="field"><label>Password</label><input id="password" type="password" minlength="6" autocomplete="current-password"></div>
+<div class="field"><label for="email">Email</label><input id="email" type="email" autocomplete="email" autocapitalize="off" spellcheck="false" required></div>
+<div class="field"><label for="password">Password</label><div class="password-wrap"><input id="password" type="password" minlength="6" autocomplete="current-password" required><button class="btn alt" type="button" id="showPassword" aria-label="Show password">Show</button></div></div>
 <div class="actions">
-<button class="btn" id="authGo">Create account</button>
-<button class="btn alt" id="authSwitch">I already have an account</button><button class="btn alt" type="button" id="resendConfirm">Resend confirmation email</button><button class="btn alt" type="button" id="forgotPassword">Forgot password?</button>
+<button class="btn" id="authGo" type="button">Login</button>
+<button class="btn alt" id="authSwitch" type="button">Create a new account</button>
+<button class="btn alt" type="button" id="forgotPassword">Forgot password?</button>
 </div>
 <p id="authMsg" role="status"></p>
 </div>
@@ -221,7 +223,7 @@ mode=m;
 say('authHeading',m==='signup'?'Create account':'Login');
 $('authGo').textContent=m==='signup'?'Create account':'Login';
 $('authSwitch').textContent=m==='signup'?'I already have an account':'Create a new account';
-$('resendConfirm').classList.toggle('hidden',m!=='signup');
+// Confirmation emails are not part of the normal login flow.
 $('forgotPassword').classList.toggle('hidden',m==='signup');
 $('password').autocomplete=m==='signup'?'new-password':'current-password';
 say('authMsg','');
@@ -388,19 +390,31 @@ $('authSwitch').onclick=()=>auth(mode==='signup'?'login':'signup');
 $('authGo').onclick=async()=>{
 const email=$('email').value.trim().toLowerCase();
 const password=$('password').value;
-if(!email||!$('email').checkValidity()){say('authMsg','Please enter a valid email address.');$('email').focus();return;}
-if(password.length<6){say('authMsg','Password must be at least 6 characters.');$('password').focus();return;}
-$('authGo').disabled=true;$('authGo').textContent=mode==='signup'?'Creating account…':'Logging in…';say('authMsg','Connecting securely…');
+if(!email||!$('email').checkValidity()){say('authMsg','Valid email address enter karein.');$('email').focus();return;}
+if(password.length<6){say('authMsg','Password kam se kam 6 characters ka hona chahiye.');$('password').focus();return;}
+const b=$('authGo');b.disabled=true;b.textContent=mode==='signup'?'Creating account…':'Logging in…';say('authMsg','Please wait…');
 try{
-const redirect=location.origin+location.pathname;
-const result=mode==='signup'?await db.auth.signUp({email,password,options:{emailRedirectTo:redirect}}):await db.auth.signInWithPassword({email,password});
-if(result.error){say('authMsg',result.error.message);return;}
-if(mode==='signup'&&!result.data.session){say('authMsg','Account created. If confirmation is enabled, check Inbox/Spam. If email is delayed, use Resend confirmation below.');return;}
+const result=mode==='signup'
+?await db.auth.signUp({email,password})
+:await db.auth.signInWithPassword({email,password});
+if(result.error){
+const msg=result.error.message||'';
+if(/invalid login credentials/i.test(msg)) say('authMsg','Email ya password match nahi hua. Email spelling check karein. Password yaad nahi hai to “Forgot password?” use karein. Naya account dobara banane ki zaroorat nahi.');
+else if(/already registered|already exists|user already/i.test(msg)) say('authMsg','Is email ka account pehle se hai. “Login” par switch karke sign in karein.');
+else if(/rate limit/i.test(msg)) say('authMsg','Bahut attempts ho gaye. Thoda wait karke dobara try karein.');
+else say('authMsg',msg||'Login nahi ho paya. Dobara try karein.');
+return;
+}
+if(mode==='signup'&&!result.data.session){
+say('authMsg','Account ban gaya, lekin Supabase par email confirmation abhi bhi ON hai. Confirmation OFF setting verify karni hogi; login tabhi hoga jab account confirm ho.');
+return;
+}
 hide('authModal');user=result.data.user;await load();
-}catch(err){say('authMsg','Connection error. Please check internet and retry. '+(err?.message||''));}
-finally{$('authGo').disabled=false;$('authGo').textContent=mode==='signup'?'Create account':'Login';}
+}catch(err){say('authMsg','Connection issue. Internet check karke dobara try karein. '+(err?.message||''));}
+finally{b.disabled=false;b.textContent=mode==='signup'?'Create account':'Login';}
 };
-$('resendConfirm').onclick=async()=>{const email=$('email').value.trim().toLowerCase();if(!email||!$('email').checkValidity()){say('authMsg','Enter the account email first.');$('email').focus();return;}const b=$('resendConfirm');b.disabled=true;say('authMsg','Sending confirmation email…');try{const x=await db.auth.resend({type:'signup',email,options:{emailRedirectTo:location.origin+location.pathname}});say('authMsg',x.error?'Could not resend: '+x.error.message:'Confirmation request sent. Check Inbox and Spam.');}catch(e){say('authMsg','Email resend error: '+(e?.message||'Please try again.'));}finally{b.disabled=false;}};
+$('showPassword').onclick=()=>{const p=$('password'),visible=p.type==='password';p.type=visible?'text':'password';$('showPassword').textContent=visible?'Hide':'Show';$('showPassword').setAttribute('aria-label',visible?'Hide password':'Show password');};
+['email','password'].forEach(id=>$(id).addEventListener('keydown',e=>{if(e.key==='Enter'){$('authGo').click();}}));
 $('forgotPassword').onclick=async()=>{const email=$('email').value.trim().toLowerCase();if(!email||!$('email').checkValidity()){say('authMsg','Enter your account email first.');$('email').focus();return;}const b=$('forgotPassword');b.disabled=true;say('authMsg','Sending password reset email…');try{const x=await db.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});say('authMsg',x.error?'Reset failed: '+x.error.message:'If the account exists, a password reset email has been requested. Check Inbox and Spam.');}catch(e){say('authMsg','Reset request error: '+(e?.message||'Please retry.'));}finally{b.disabled=false;}};
 db.auth.onAuthStateChange(async(event,session)=>{if(event==='PASSWORD_RECOVERY'&&session){const next=prompt('Enter your new password (minimum 6 characters):');if(next&&next.length>=6){const result=await db.auth.updateUser({password:next});alert(result.error?'Password update failed: '+result.error.message:'Password updated. Please log in with the new password.');}else if(next!==null){alert('Password must be at least 6 characters.');}}});
 
