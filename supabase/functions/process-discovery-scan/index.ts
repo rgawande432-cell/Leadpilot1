@@ -39,7 +39,7 @@ Deno.serve(async(req)=>{
  if(apiKey&&braveApproved){
   const niche=business.niche||business.business_type||business.name,area=cfg.area||business.location||"India",services=(business.services||[]).slice(0,4).join(" ")||niche;
   searchQueries=[`"${niche}" "looking for" "${area}"`,`"${services}" "need" "${area}"`,`"${niche}" "recommend" "${area}"`,`"${niche}" "quotation" "${area}"`,`"${niche}" "where can I buy" "${area}`,...(cfg.keywords||[]).filter(Boolean).slice(0,1).map((keyword:string)=>`"${keyword}" "${area}" "looking for"`)].slice(0,6);
-  const results=[];
+  const results=[];let successfulRequests=0;
   try{
    for(const q of searchQueries){
     const endpoint=new URL("https://api.search.brave.com/res/v1/web/search");endpoint.searchParams.set("q",q);endpoint.searchParams.set("country","IN");endpoint.searchParams.set("search_lang","en");endpoint.searchParams.set("count","8");endpoint.searchParams.set("freshness","pw");endpoint.searchParams.set("result_filter","web");
