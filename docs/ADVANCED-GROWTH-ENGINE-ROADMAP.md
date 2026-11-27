@@ -11,7 +11,7 @@ Status snapshot: 27 November 2026. Continue from existing code; do not reset com
 - Public intent search and scheduled discovery worker; providers/configuration are gated.
 - Analytics/status and source counts, notifications, CSV export, source connections and follow-up planner UI.
 - AI Growth Advisor uses saved business profile and CRM records to suggest profile completion, overdue follow-ups, response to new enquiries, enquiry-link sharing and outcome tracking. Latest update adds a business/niche/location-aware **Create a local content draft** action which opens Content Studio.
-- SEO landing pages, robots/sitemap and Cloudflare Pages build guide are in repository.
+- SEO landing pages, robots/sitemap and Cloudflare Worker deployment guide are in repository.
 
 ## Phase A — Core reliability
 - [x] Public lead intake implementation and Edge Function deployed.
@@ -48,6 +48,18 @@ Status snapshot: 27 November 2026. Continue from existing code; do not reset com
 - [x] CSV export based on account records.
 - [x] Notifications from saved account data.
 - [ ] Response-time and weekly conversion reporting: not yet implemented; requires reliable timestamps/outcome data and additional analytics work.
+
+## Reliability audit — 27 November 2026
+
+- Supabase project status: ACTIVE_HEALTHY; all 7 deployed Edge Functions report ACTIVE.
+- Latest inspected GitHub Actions workflow run #248 passed its backend tests, inline JavaScript syntax check and Supabase Edge Function Deno type-check. The later manual-scan change was separately accepted and deployed by Supabase as `process-discovery-scan` version 12; deployment bundling succeeded.
+- Cloudflare/Supabase scheduler: all 5 active cron jobs had successful runs in the inspected 24-hour window; 0 failed cron runs were found.
+- Discovery queue: the previously failed GDELT job was retried through the current scheduled worker and completed using Google News RSS fallback. No candidate matched the business keywords; no lead or contact data was fabricated.
+- Manual discovery scan now uses the approved GDELT source with Google News RSS fallback and atomically claims queued jobs to prevent the manual action and scheduled worker from processing the same job twice.
+- Supabase function/edge error-log checks returned no matching errors in the inspected window; database health advisors returned no lints.
+- External secrets: `OPENAI_API_KEY` and `BRAVE_SEARCH_API_KEY` were not present in the Supabase Vault secret-name check. Content Studio therefore uses its clearly labelled local templates instead of live OpenAI generation; expanded Brave search remains unavailable. The free GDELT/Google News route is active.
+- Remaining verification: an authenticated end-to-end signup/email-confirmation and public-enquiry-to-CRM test still needs an owner test session. Manual scan version 12 is deployed, but its authenticated UI path has not yet been exercised with an owner session.
+- Security advisories still include disabled leaked-password protection (Auth setting), plus two SECURITY DEFINER RPCs that intentionally enforce business-owner checks. Social OAuth tables are service-role-only and have no client policies; do not add broad client policies.
 
 ## External deployment/account blockers (not code tasks)
 - Cloudflare Worker `leadpilot1`: deployed and reachable at `https://leadpilot1.rgawande432.workers.dev/`. `urbanbuying.com` zone is Active in Cloudflare, but the Worker custom domain is not attached yet; dashboard currently does not expose the expected Custom Domain action. Git-based auto-deploy is also not yet verified.
