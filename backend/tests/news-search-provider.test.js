@@ -171,8 +171,9 @@ test("Brave Search fallback returns normalized public candidates and uses API-ke
     throw new Error("RSS should not be called when Brave returns results");
   };
   const result=await fetchNewsCandidates(["buyer intent Pune"],{fetcher,braveApiKey:"brave-test",googleNewsRssEnabled:true});
-  assert.equal(result.results.length,1);
-  assert.equal(result.results[0].title,"Looking for a supplier");
+  assert.equal(result.results.length,2);
+  assert.ok(result.results.some(x=>x.title==="Looking for a supplier"));
+  assert.ok(result.results.some(x=>x.title==="Anyone know where to buy this?"));
   assert.deepEqual(result.providers,["Brave Search"]);
   assert.deepEqual(result.providerSuccesses,["GDELT Project","Brave Search"]);
   const request=calls.find(x=>x.url.includes("api.search.brave.com"));
