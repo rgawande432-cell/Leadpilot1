@@ -1,8 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-import { parseGoogleNewsRss } from "../_shared/google-news-rss.js";
-import { parseGdeltResponse } from "../_shared/gdelt-response.js";
-import { saveDiscoveryCandidates } from "../_shared/discovery-candidate-processing.js";\nimport { fetchNewsCandidates } from "../_shared/news-search-provider.js";
+import { saveDiscoveryCandidates } from "../_shared/discovery-candidate-processing.js";
+import { fetchNewsCandidates } from "../_shared/news-search-provider.js";
 const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type, x-leadpilot-worker-token","Access-Control-Allow-Methods":"POST, OPTIONS"};
 const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...cors,"Content-Type":"application/json"}});
 const clean=(s:string)=>String(s||"").toLowerCase().replace(/\s+/g," ").trim().slice(0,600);
@@ -40,7 +39,16 @@ Deno.serve(async(req)=>{
    const query='"'+category+'" "'+area+'"';
    const terms=[biz.niche,biz.business_type,...(biz.services||[]),...(cfg.keywords||[])].filter(Boolean).map((t:string)=>String(t).toLowerCase()).filter((t:string)=>t.length>=3);
    let savedCount=0,articles:any[]=[],provider="none",externalStatus=approved?"connected":"source_disabled",errorText=approved?"":"Free news source disabled or terms review incomplete.";
-   if(approved){\n    try{\n     const search=await fetchNewsCandidates([query],{maxRecords:20,timespan:"7d"});\n     articles=search.results;provider=search.providers.join(" + ")||"none";\n     if(!articles.length&&search.errors.length)throw new Error(search.errors.join("; "));\n     const candidates=articles.map((result:any)=>({title:String(result.title||""),url:String(result.url||""),domain:String(result.domain||""),date:String(result.date||"")}));\n     savedCount=await saveDiscoveryCandidates({admin,businessId:biz.id,runId:runId||run.id,candidates,terms,mode:"title_explicit",sourceName:provider+" (free search)",maxCandidates:20});\n    }catch(e){externalStatus="error";errorText=e instanceof Error?e.message:String(e);}\n   }\n   const completed=new Date().toISOString();
+   if(approved){
+    try{
+     const search=await fetchNewsCandidates([query],{maxRecords:20,timespan:"7d"});
+     articles=search.results;provider=search.providers.join(" + ")||"none";
+     if(!articles.length&&search.errors.length)throw new Error(search.errors.join("; "));
+     const candidates=articles.map((result:any)=>({title:String(result.title||""),url:String(result.url||""),domain:String(result.domain||""),date:String(result.date||"")}));
+     savedCount=await saveDiscoveryCandidates({admin,businessId:biz.id,runId:runId||run.id,candidates,terms,mode:"title_explicit",sourceName:provider+" (free search)",maxCandidates:20});
+    }catch(e){externalStatus="error";errorText=e instanceof Error?e.message:String(e);}
+   }
+   const completed=new Date().toISOString();
    const report={business_name:biz.name,existing_real_enquiries:leadCount||0,verified_intent_signals:verifiedCount||0,pending_search_candidates:savedCount,external_search_status:externalStatus,external_search_error:errorText,provider,queries:approved?[query]:[],note:approved?"Public news results are weak signals, not confirmed buyer intent. Data source attribution: GDELT Project and/or Google News RSS. Pending verification only.":"No external provider active; no fabricated leads or signals created."};
    await admin.from("ai_discovery_runs").update({status:externalStatus==="error"?"failed":"completed",completed_at:completed,signals_found:savedCount,leads_created:0,source_name:provider||"Scheduled internal check",error_summary:errorText||report.note}).eq("id",runId);
    await admin.from("ai_discovery_jobs").update({status:externalStatus==="error"?"failed":"completed",completed_at:completed,next_retry_at:externalStatus==="error"?new Date(Date.now()+Math.min(60,10*(job.attempts||1))*60000).toISOString():null,error_message:errorText||null,metadata:{...(job.metadata||{}),report}}).eq("id",job.id);
