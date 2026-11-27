@@ -35,6 +35,7 @@ Deno.serve(async(req)=>{
  const {data:braveSource}=await admin.from("ai_discovery_sources").select("enabled,terms_reviewed").eq("source_key","brave_public_web_search").maybeSingle();
  const braveApproved=!!braveSource?.enabled&&!!braveSource?.terms_reviewed;
  let candidates=0,externalStatus=apiKey?(braveApproved?"connected":"source_disabled"):"disconnected",externalError=apiKey&&!braveApproved?"Brave source is disabled or terms review is incomplete.":"",searchQueries:string[]=[];
+ await recordDiscoverySourceHealth({admin,businessId,sourceKey:"brave_public_web_search",status:!apiKey?"disabled":(!braveApproved?"disabled":"pending"),successful:!apiKey||!braveApproved,notes:!apiKey?"Brave API key not configured":(!braveApproved?"Brave source disabled or terms not reviewed":"Search scheduled")});
  if(apiKey&&braveApproved){
   const niche=business.niche||business.business_type||business.name,area=cfg.area||business.location||"India",services=(business.services||[]).slice(0,4).join(" ")||niche;
   searchQueries=[`"${niche}" looking for ${area}`,`need ${services} near ${area}`,`"${niche}" price quote ${area}`,...(cfg.keywords||[]).filter(Boolean).slice(0,2).map((keyword:string)=>`"${keyword}" "${area}" looking for`)];
@@ -49,7 +50,7 @@ Deno.serve(async(req)=>{
    const terms=[business.niche,business.business_type,...(business.services||[]),...(cfg.keywords||[])].filter(Boolean);
    candidates=await saveDiscoveryCandidates({admin,businessId,runId:run.id,candidates:results,terms,mode:"text_intent",sourceName:"Brave Search",maxCandidates:25});
    externalStatus="connected"; 
-  }catch(e){externalStatus="error";externalError=e instanceof Error?e.message:String(e);}
+  }catch(e){externalStatus="error";externalError=e instanceof Error?e.message:String(e);await recordDiscoverySourceHealth({admin,businessId,sourceKey:"brave_public_web_search",status:"failed",successful:false,notes:externalError});}
  }
  const completed=new Date().toISOString();
  const report={existing_real_enquiries:leadCount||0,verified_intent_signals:signalCount||0,pending_search_candidates:candidates,available_source_types:available.map(s=>s.display_name),external_search_status:externalStatus,external_search_error:externalError,queries:searchQueries,note:apiKey?"External public search candidates saved as pending review only. No leads were auto-created or contact data scraped.":"External search is disconnected (API key missing). This run checked connected internal sources only; no fake leads created."};
