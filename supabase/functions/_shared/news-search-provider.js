@@ -70,7 +70,25 @@ export async function fetchNewsCandidates(queries = [], options = {}) {
       }
     }
 
-    if (!articles.length && options.braveApiKey) {\n      try {\n        const endpoint = new URL("https://api.search.brave.com/res/v1/web/search");\n        endpoint.searchParams.set("q", query);\n        endpoint.searchParams.set("country", "IN");\n        endpoint.searchParams.set("search_lang", "en");\n        endpoint.searchParams.set("count", String(Math.min(20, maxRecords)));\n        endpoint.searchParams.set("freshness", "pw");\n        endpoint.searchParams.set("result_filter", "web");\n        const response = await fetcher(endpoint, { headers: { Accept: "application/json", "X-Subscription-Token": options.braveApiKey } });\n        if (!response.ok) throw new Error("Brave Search HTTP " + response.status);\n        const data = await response.json();\n        providerSuccesses.add("Brave Search");\n        articles = normalizeExternalResults((data.web?.results || []).map((item) => ({ title: item.title, url: item.url, description: item.description, page_age: item.page_age })), "page_age").slice(0, maxRecords);\n        if (articles.length) providers.add("Brave Search");\n      } catch (error) { errors.push("Brave Search: " + (error instanceof Error ? error.message : String(error))); }\n    }\n\n    if (!articles.length && options.googleNewsRssEnabled !== false) {
+    if (!articles.length && options.braveApiKey) {
+      try {
+        const endpoint = new URL("https://api.search.brave.com/res/v1/web/search");
+        endpoint.searchParams.set("q", query);
+        endpoint.searchParams.set("country", "IN");
+        endpoint.searchParams.set("search_lang", "en");
+        endpoint.searchParams.set("count", String(Math.min(20, maxRecords)));
+        endpoint.searchParams.set("freshness", "pw");
+        endpoint.searchParams.set("result_filter", "web");
+        const response = await fetcher(endpoint, { headers: { Accept: "application/json", "X-Subscription-Token": options.braveApiKey } });
+        if (!response.ok) throw new Error("Brave Search HTTP " + response.status);
+        const data = await response.json();
+        providerSuccesses.add("Brave Search");
+        articles = normalizeExternalResults((data.web?.results || []).map((item) => ({ title: item.title, url: item.url, description: item.description, page_age: item.page_age })), "page_age").slice(0, maxRecords);
+        if (articles.length) providers.add("Brave Search");
+      } catch (error) { errors.push("Brave Search: " + (error instanceof Error ? error.message : String(error))); }
+    }
+
+    if (!articles.length && options.googleNewsRssEnabled !== false) {
       const rssUrl = new URL("https://news.google.com/rss/search");
       rssUrl.searchParams.set("q", query + " when:" + timespan);
       rssUrl.searchParams.set("hl", hl);
