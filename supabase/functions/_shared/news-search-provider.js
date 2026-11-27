@@ -10,6 +10,22 @@ const validHttpUrl = (value) => {
   }
 };
 
+const normalizeExternalResults = (items = [], dateField = "date") => {
+  if (!Array.isArray(items)) return [];
+  return items.slice(0, 50).flatMap((item) => {
+    const url = validHttpUrl(item?.url || item?.link);
+    if (!url) return [];
+    let domain = "";
+    try { domain = new URL(url).hostname; } catch { return []; }
+    return [{
+      title: String(item?.title || ""),
+      url,
+      domain,
+      date: String(item?.[dateField] || item?.publishedDate || item?.date || "")
+    }];
+  });
+};
+
 /** Fetch public article candidates with GDELT -> Google News RSS -> optional self-hosted SearXNG fallback.
  * @param {string[]} queries
  * @param {{fetcher?:typeof fetch,maxRecords?:number,timespan?:string,hl?:string,gl?:string,ceid?:string,searxngUrl?:string,tavilyApiKey?:string}} options
@@ -77,7 +93,7 @@ export async function fetchNewsCandidates(queries = [], options = {}) {
         const response = await fetcher(endpoint, { headers: { Accept: "application/json" } });
         if (!response.ok) throw new Error("SearXNG HTTP " + response.status);
         const data = await response.json();
-        articles = (Array.isArray(data.results) ? data.results : []).slice(0, maxRecords).map((item) => ({ title: item.title || "", url: item.url || item.link || "", domain: item.url ? new URL(item.url).hostname : "", date: item.publishedDate || item.date || "" }));
+        articles = normalizeExternalResults(data.results, "publishedDate").slice(0, maxRecords);
         if (articles.length) providers.add("SearXNG");
       } catch (error) { errors.push("SearXNG: " + (error instanceof Error ? error.message : String(error))); }
     }
@@ -87,7 +103,7 @@ export async function fetchNewsCandidates(queries = [], options = {}) {
         const response = await fetcher("https://api.tavily.com/search", { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ api_key: options.tavilyApiKey, query, search_depth: "basic", max_results: maxRecords, include_answer: false }) });
         if (!response.ok) throw new Error("Tavily HTTP " + response.status);
         const data = await response.json();
-        articles = (Array.isArray(data.results) ? data.results : []).slice(0, maxRecords).map((item) => ({ title: item.title || "", url: item.url || "", domain: item.url ? new URL(item.url).hostname : "", date: item.published_date || "" }));
+        articles = normalizeExternalResults(data.results, "published_date").slice(0, maxRecords);
         if (articles.length) providers.add("Tavily");
       } catch (error) { errors.push("Tavily: " + (error instanceof Error ? error.message : String(error))); }
     }
