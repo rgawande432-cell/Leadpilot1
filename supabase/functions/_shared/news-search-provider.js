@@ -10,9 +10,25 @@ const validHttpUrl = (value) => {
   }
 };
 
-/** Fetch public article candidates with one shared GDELT -> Google News RSS fallback.
+const normalizeExternalResults = (items = [], dateField = "date") => {
+  if (!Array.isArray(items)) return [];
+  return items.slice(0, 50).flatMap((item) => {
+    const url = validHttpUrl(item?.url || item?.link);
+    if (!url) return [];
+    let domain = "";
+    try { domain = new URL(url).hostname; } catch { return []; }
+    return [{
+      title: String(item?.title || ""),
+      url,
+      domain,
+      date: String(item?.[dateField] || item?.publishedDate || item?.date || "")
+    }];
+  });
+};
+
+/** Fetch public article candidates with GDELT -> Google News RSS -> optional self-hosted SearXNG fallback.
  * @param {string[]} queries
- * @param {{fetcher?:typeof fetch,maxRecords?:number,timespan?:string,hl?:string,gl?:string,ceid?:string}} options
+ * @param {{fetcher?:typeof fetch,maxRecords?:number,timespan?:string,hl?:string,gl?:string,ceid?:string,searxngUrl?:string,tavilyApiKey?:string,braveApiKey?:string,googleNewsRssEnabled?:boolean}} options
  */
 export async function fetchNewsCandidates(queries = [], options = {}) {
   const fetcher = options.fetcher || fetch;
@@ -24,6 +40,7 @@ export async function fetchNewsCandidates(queries = [], options = {}) {
   const results = [];
   const providers = new Set();
   const errors = [];
+  const providerSuccesses = new Set();
   let gdeltRateLimited = false;
 
   for (const query of [...new Set(queries.filter(Boolean).map(String))]) {
@@ -41,7 +58,8 @@ export async function fetchNewsCandidates(queries = [], options = {}) {
         if (response.ok) {
           const parsed = parseGdeltResponse(await response.text());
           articles = parsed.articles;
-          if (!articles.length && parsed.fallbackReason) errors.push("GDELT: " + parsed.fallbackReason);
+          if (parsed.fallbackReason) errors.push("GDELT: " + parsed.fallbackReason);
+          else providerSuccesses.add("GDELT Project");
         } else {
           errors.push("GDELT HTTP " + response.status);
           if (response.status === 429) gdeltRateLimited = true;
@@ -52,7 +70,25 @@ export async function fetchNewsCandidates(queries = [], options = {}) {
       }
     }
 
-    if (!articles.length) {
+    if (!articles.length && options.braveApiKey) {
+      try {
+        const endpoint = new URL("https://api.search.brave.com/res/v1/web/search");
+        endpoint.searchParams.set("q", query);
+        endpoint.searchParams.set("country", "IN");
+        endpoint.searchParams.set("search_lang", "en");
+        endpoint.searchParams.set("count", String(Math.min(20, maxRecords)));
+        endpoint.searchParams.set("freshness", "pw");
+        endpoint.searchParams.set("result_filter", "web,discussions");
+        const response = await fetcher(endpoint, { headers: { Accept: "application/json", "X-Subscription-Token": options.braveApiKey } });
+        if (!response.ok) throw new Error("Brave Search HTTP " + response.status);
+        const data = await response.json();
+        providerSuccesses.add("Brave Search");
+        articles = normalizeExternalResults([...(data.web?.results || []), ...(data.discussions?.results || [])].map((item) => ({ title: item.title, url: item.url, description: item.description, date: item.page_age || item.age })), "page_age").slice(0, maxRecords);
+        if (articles.length) providers.add("Brave Search");
+      } catch (error) { errors.push("Brave Search: " + (error instanceof Error ? error.message : String(error))); }
+    }
+
+    if (!articles.length && options.googleNewsRssEnabled !== false) {
       const rssUrl = new URL("https://news.google.com/rss/search");
       rssUrl.searchParams.set("q", query + " when:" + timespan);
       rssUrl.searchParams.set("hl", hl);
@@ -62,10 +98,37 @@ export async function fetchNewsCandidates(queries = [], options = {}) {
         const response = await fetcher(rssUrl, { headers: { Accept: "application/rss+xml, application/xml, text/xml" } });
         if (!response.ok) throw new Error("Google News RSS HTTP " + response.status);
         articles = parseGoogleNewsRss(await response.text());
+        providerSuccesses.add("Google News RSS");
         if (articles.length) providers.add("Google News RSS");
       } catch (error) {
         errors.push("Google News RSS: " + (error instanceof Error ? error.message : String(error)));
       }
+    }
+
+    if (!articles.length && options.searxngUrl) {
+      try {
+        const endpoint = new URL("/search", options.searxngUrl);
+        endpoint.searchParams.set("q", query);
+        endpoint.searchParams.set("format", "json");
+        endpoint.searchParams.set("language", "en");
+        const response = await fetcher(endpoint, { headers: { Accept: "application/json" } });
+        if (!response.ok) throw new Error("SearXNG HTTP " + response.status);
+        const data = await response.json();
+        providerSuccesses.add("SearXNG");
+        articles = normalizeExternalResults(data.results, "publishedDate").slice(0, maxRecords);
+        if (articles.length) providers.add("SearXNG");
+      } catch (error) { errors.push("SearXNG: " + (error instanceof Error ? error.message : String(error))); }
+    }
+
+    if (!articles.length && options.tavilyApiKey) {
+      try {
+        const response = await fetcher("https://api.tavily.com/search", { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ api_key: options.tavilyApiKey, query, search_depth: "basic", max_results: maxRecords, include_answer: false }) });
+        if (!response.ok) throw new Error("Tavily HTTP " + response.status);
+        const data = await response.json();
+        providerSuccesses.add("Tavily");
+        articles = normalizeExternalResults(data.results, "published_date").slice(0, maxRecords);
+        if (articles.length) providers.add("Tavily");
+      } catch (error) { errors.push("Tavily: " + (error instanceof Error ? error.message : String(error))); }
     }
 
     for (const article of articles) {
@@ -88,5 +151,5 @@ export async function fetchNewsCandidates(queries = [], options = {}) {
 
   const unique = new Map();
   for (const result of results) if (!unique.has(result.url)) unique.set(result.url, result);
-  return { results: [...unique.values()], providers: [...providers], errors };
+  return { results: [...unique.values()], providers: [...providers], providerSuccesses: [...providerSuccesses], errors };
 }

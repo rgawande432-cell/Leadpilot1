@@ -52,3 +52,145 @@ test("adapter deduplicates links and stops GDELT after rate limit", async () => 
   assert.equal(result.providers.length, 1);
   assert.deepEqual(result.providers, ["Google News RSS"]);
 });
+
+
+test("optional SearXNG fallback is used only after GDELT and RSS yield no results", async () => {
+  const calls = [];
+  const fetcher = async (url) => {
+    calls.push(String(url));
+    if (String(url).includes("api.gdeltproject.org")) return new Response(JSON.stringify({ articles: [] }), { status: 200 });
+    if (String(url).includes("news.google.com")) return new Response("<rss><channel></channel></rss>", { status: 200 });
+    return new Response(JSON.stringify({ results: [{ title: "Local buyer signal", url: "https://example.org/request", publishedDate: "2026-11-27" }] }), { status: 200 });
+  };
+  const result = await fetchNewsCandidates(["buyer intent Pune"], { fetcher, searxngUrl: "https://search.example.test" });
+  assert.equal(result.results.length, 1);
+  assert.equal(result.results[0].title, "Local buyer signal");
+  assert.deepEqual(result.providers, ["SearXNG"]);
+  assert.equal(calls.length, 3);
+});
+
+test("SearXNG is not called when Google News RSS returns candidates", async () => {
+  const fetcher = async (url) => {
+    if (String(url).includes("api.gdeltproject.org")) return new Response(JSON.stringify({ articles: [] }), { status: 200 });
+    return new Response('<rss><channel><item><title>RSS result</title><link>https://example.org/rss</link></item></channel></rss>', { status: 200 });
+  };
+  const result = await fetchNewsCandidates(["buyer intent"], { fetcher, searxngUrl: "https://search.example.test" });
+  assert.deepEqual(result.providers, ["Google News RSS"]);
+});
+
+
+test("optional Tavily fallback is used after SearXNG is absent or fails", async () => {
+  const calls = [];
+  const fetcher = async (url, init = {}) => {
+    calls.push({ url: String(url), init });
+    if (String(url).includes("api.gdeltproject.org")) return new Response(JSON.stringify({ articles: [] }), { status: 200 });
+    if (String(url).includes("news.google.com")) return new Response("<rss><channel></channel></rss>", { status: 200 });
+    if (String(url).includes("search.example.test")) return new Response("not available", { status: 503 });
+    return new Response(JSON.stringify({ results: [{ title: "Tavily buyer request", url: "https://example.net/intent", content: "looking for a supplier" }] }), { status: 200 });
+  };
+  const result = await fetchNewsCandidates(["buyer query"], { fetcher, searxngUrl: "https://search.example.test", tavilyApiKey: "tvly-test" });
+  assert.equal(result.results.length, 1);
+  assert.equal(result.results[0].title, "Tavily buyer request");
+  assert.deepEqual(result.providers, ["Tavily"]);
+  const request = calls.find(c => c.url.includes("api.tavily.com"));
+  assert.equal(request.init.method, "POST");
+  assert.equal(JSON.parse(request.init.body).api_key, "tvly-test");
+});
+
+
+test("optional provider result normalization ignores malformed and unsafe URLs", async () => {
+  const searxFetcher = async (url) => {
+    if (String(url).includes("api.gdeltproject.org")) return new Response(JSON.stringify({ articles: [] }), { status: 200 });
+    if (String(url).includes("news.google.com")) return new Response("<rss><channel></channel></rss>", { status: 200 });
+    return new Response(JSON.stringify({ results: [
+      { title: "Malformed", url: "not a url" },
+      { title: "Unsafe", url: "javascript:alert(1)" },
+      { title: "Valid candidate", url: "https://example.org/valid", publishedDate: "2026-11-27" }
+    ] }), { status: 200 });
+  };
+  const searx = await fetchNewsCandidates(["intent"], { fetcher: searxFetcher, searxngUrl: "https://search.example.test" });
+  assert.equal(searx.results.length, 1);
+  assert.equal(searx.results[0].url, "https://example.org/valid");
+
+  const tavilyFetcher = async (url) => {
+    if (String(url).includes("api.gdeltproject.org")) return new Response(JSON.stringify({ articles: [] }), { status: 200 });
+    if (String(url).includes("news.google.com")) return new Response("<rss><channel></channel></rss>", { status: 200 });
+    return new Response(JSON.stringify({ results: [
+      { title: "Bad URL", url: "::::" },
+      { title: "Tavily candidate", url: "https://example.net/good" }
+    ] }), { status: 200 });
+  };
+  const tavily = await fetchNewsCandidates(["intent"], { fetcher: tavilyFetcher, tavilyApiKey: "tvly-test" });
+  assert.equal(tavily.results.length, 1);
+  assert.equal(tavily.results[0].url, "https://example.net/good");
+});
+
+
+test("Google News RSS fallback is skipped when source approval is disabled", async () => {
+  const calls=[];
+  const fetcher=async(url)=>{
+    calls.push(String(url));
+    return new Response(JSON.stringify({articles:[]}),{status:200});
+  };
+  const result=await fetchNewsCandidates(["buyer query"],{fetcher,googleNewsRssEnabled:false});
+  assert.equal(calls.length,1);
+  assert.match(calls[0],/api\.gdeltproject\.org/);
+  assert.deepEqual(result.results,[]);
+  assert.deepEqual(result.providers,[]);
+});
+
+
+test("provider success tracking distinguishes empty results from failures", async () => {
+  const fetcher=async(url)=>{
+    if(String(url).includes("api.gdeltproject.org"))return new Response(JSON.stringify({articles:[]}),{status:200});
+    return new Response("<rss><channel></channel></rss>",{status:200});
+  };
+  const result=await fetchNewsCandidates(["empty query"],{fetcher});
+  assert.deepEqual(result.results,[]);
+  assert.deepEqual(result.providers,[]);
+  assert.deepEqual(result.providerSuccesses,["GDELT Project","Google News RSS"]);
+  assert.deepEqual(result.errors,[]);
+});
+
+test("rate-limited primary source can still be a completed scan when RSS succeeds empty", async () => {
+  const fetcher=async(url)=>{
+    if(String(url).includes("api.gdeltproject.org"))return new Response("rate limited",{status:429});
+    return new Response("<rss><channel></channel></rss>",{status:200});
+  };
+  const result=await fetchNewsCandidates(["empty fallback"],{fetcher});
+  assert.deepEqual(result.providerSuccesses,["Google News RSS"]);
+  assert.match(result.errors[0],/GDELT HTTP 429/);
+});
+
+test("Brave Search fallback returns normalized public candidates and uses API-key header",async()=>{
+  const calls=[];
+  const fetcher=async(url,init={})=>{
+    calls.push({url:String(url),init});
+    if(String(url).includes("api.gdeltproject.org"))return new Response(JSON.stringify({articles:[]}),{status:200});
+    if(String(url).includes("api.search.brave.com"))return new Response(JSON.stringify({web:{results:[{title:"Looking for a supplier",url:"https://example.com/buyer",description:"Need a local supplier",page_age:"2026-11-27"}]},discussions:{results:[{title:"Anyone know where to buy this?",url:"https://forum.example.com/request",description:"Looking for a local provider",age:"1 day ago"}]}}),{status:200});
+    throw new Error("RSS should not be called when Brave returns results");
+  };
+  const result=await fetchNewsCandidates(["buyer intent Pune"],{fetcher,braveApiKey:"brave-test",googleNewsRssEnabled:true});
+  assert.equal(result.results.length,2);
+  assert.ok(result.results.some(x=>x.title==="Looking for a supplier"));
+  assert.ok(result.results.some(x=>x.title==="Anyone know where to buy this?"));
+  assert.deepEqual(result.providers,["Brave Search"]);
+  assert.deepEqual(result.providerSuccesses,["GDELT Project","Brave Search"]);
+  const request=calls.find(x=>x.url.includes("api.search.brave.com"));
+  assert.equal(request.init.headers["X-Subscription-Token"],"brave-test");
+  assert.match(request.url,/country=IN/);
+  assert.match(request.url,/freshness=pw/);
+  assert.match(request.url,/result_filter=/);
+});
+
+test("Brave Search is not called without an approved API key passed to the adapter",async()=>{
+  const calls=[];
+  const fetcher=async(url)=>{
+    calls.push(String(url));
+    if(String(url).includes("api.gdeltproject.org"))return new Response(JSON.stringify({articles:[]}),{status:200});
+    return new Response("<rss><channel></channel></rss>",{status:200});
+  };
+  const result=await fetchNewsCandidates(["buyer intent"],{fetcher,googleNewsRssEnabled:false});
+  assert.equal(calls.some(x=>x.includes("api.search.brave.com")),false);
+  assert.deepEqual(result.results,[]);
+});

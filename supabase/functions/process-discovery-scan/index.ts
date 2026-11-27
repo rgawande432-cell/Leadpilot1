@@ -38,18 +38,19 @@ Deno.serve(async(req)=>{
  if(!apiKey||!braveApproved)await recordDiscoverySourceHealth({admin,businessId,sourceKey:"brave_public_web_search",status:"disabled",successful:false,notes:!apiKey?"Brave API key not configured":"Brave source disabled or terms not reviewed"});
  if(apiKey&&braveApproved){
   const niche=business.niche||business.business_type||business.name,area=cfg.area||business.location||"India",services=(business.services||[]).slice(0,4).join(" ")||niche;
-  searchQueries=[`"${niche}" looking for ${area}`,`need ${services} near ${area}`,`"${niche}" price quote ${area}`,...(cfg.keywords||[]).filter(Boolean).slice(0,2).map((keyword:string)=>`"${keyword}" "${area}" looking for`)];
-  const results=[];
+  searchQueries=[`"${niche}" "looking for" "${area}"`,`"${services}" "need" "${area}"`,`"${niche}" "recommend" "${area}"`,...(cfg.keywords||[]).filter(Boolean).slice(0,1).map((keyword:string)=>`"${keyword}" "${area}" "request quote"`)].slice(0,4);
+  const results=[];let successfulRequests=0;
   try{
    for(const q of searchQueries){
-    const endpoint=new URL("https://api.search.brave.com/res/v1/web/search");endpoint.searchParams.set("q",q);endpoint.searchParams.set("country","IN");endpoint.searchParams.set("search_lang","en");endpoint.searchParams.set("count","5");endpoint.searchParams.set("freshness","pm");
+    const endpoint=new URL("https://api.search.brave.com/res/v1/web/search");endpoint.searchParams.set("q",q);endpoint.searchParams.set("country","IN");endpoint.searchParams.set("search_lang","en");endpoint.searchParams.set("count","8");endpoint.searchParams.set("freshness","pw");endpoint.searchParams.set("result_filter","web,discussions");
     const response=await fetch(endpoint,{headers:{"Accept":"application/json","X-Subscription-Token":apiKey}});
     if(!response.ok)throw new Error("Brave search HTTP "+response.status);
-    const data=await response.json();for(const item of (data.web?.results||[])){try{const parsed=new URL(item.url);if(!["http:","https:"].includes(parsed.protocol))continue;results.push({query:q,title:item.title||"",url:parsed.href,snippet:item.description||""});}catch{continue;}}
+    successfulRequests++;const data=await response.json();for(const item of [...(data.web?.results||[]),...(data.discussions?.results||[])]){try{const parsed=new URL(item.url);if(!["http:","https:"].includes(parsed.protocol))continue;results.push({query:q,title:item.title||"",url:parsed.href,snippet:item.description||item.snippet||""});}catch{continue;}}
    }
    const terms=[business.niche,business.business_type,...(business.services||[]),...(cfg.keywords||[])].filter(Boolean);
    candidates=await saveDiscoveryCandidates({admin,businessId,runId:run.id,candidates:results,terms,mode:"text_intent",sourceName:"Brave Search",maxCandidates:25});
-   externalStatus="connected"; 
+   externalStatus="connected";
+   await recordDiscoverySourceHealth({admin,businessId,sourceKey:"brave_public_web_search",status:results.length?"healthy":"no_results",successful:successfulRequests>0,notes:results.length?"Brave Search returned public candidates":"Brave Search connected but no matching results"});
   }catch(e){externalStatus="error";externalError=e instanceof Error?e.message:String(e);await recordDiscoverySourceHealth({admin,businessId,sourceKey:"brave_public_web_search",status:"failed",successful:false,notes:externalError});}
  }
  const completed=new Date().toISOString();

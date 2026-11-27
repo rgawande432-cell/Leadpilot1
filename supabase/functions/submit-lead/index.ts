@@ -30,14 +30,15 @@ Deno.serve(async (req: Request) => {
     const phone = String(body.phone || "").trim();
     const email = String(body.email || "").trim().toLowerCase();
     const message = String(body.message || "").trim();
+    const customerLocation = String(body.location || body.customer_location || "").trim();
     const source = String(body.source || "Website").trim().slice(0, 80);
     const consent = body.consent === true;
-    const consentText = "I agree to share my contact details and enquiry with this business so they can respond to my request.";
+    const consentText = "I agree to share my contact details, location and enquiry with this business so they can respond to my request.";
     if (!consent) return respond(400, { success: false, error: "Consent is required before submitting this enquiry." });
 
     if (!businessId || !name || !message || (!phone && !email))
       return respond(400, { success: false, error: "Business ID, name, message and phone or email are required" });
-    if (name.length > 100 || message.length > 2000)
+    if (name.length > 100 || message.length > 2000 || customerLocation.length > 160)
       return respond(400, { success: false, error: "Name or message exceeds allowed length" });
     if (phone && !/^[+\d\s()-]{7,20}$/.test(phone))
       return respond(400, { success: false, error: "Invalid phone number" });
@@ -77,9 +78,9 @@ Deno.serve(async (req: Request) => {
     const qualification = qualificationFromScore(score);
     const followupAt = new Date(Date.now() + qualification.delayHours * 60 * 60 * 1000).toISOString();
     const { data: lead, error: insertError } = await db.from("leads").insert({
-      business_id: businessId, name, phone: phone || null, email: email || null,
+      business_id: businessId, name, phone: phone || null, email: email || null, customer_location: customerLocation || null,
       message, source, score, intent_level: scoring.intentLevel, score_breakdown: scoring.breakdown, score_reasons: scoring.reasons, score_disclaimer: scoring.disclaimer, status: "New", qualification_status: qualification.status, qualification_notes: qualification.note, followup_at: followupAt, consent_at: new Date().toISOString(), consent_text: consentText,
-    }).select("id,business_id,name,email,phone,message,source,status,score,qualification_status,qualification_notes,followup_at,created_at").single();
+    }).select("id,business_id,name,email,phone,customer_location,message,source,status,score,qualification_status,qualification_notes,followup_at,created_at").single();
 
     if (insertError?.code === "23505") return respond(409, { success: false, duplicate: true, error: "An enquiry from this contact already exists" });
     if (insertError) return respond(500, { success: false, error: "Could not save enquiry" });

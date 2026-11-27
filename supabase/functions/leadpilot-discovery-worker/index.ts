@@ -2,6 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 import { saveDiscoveryCandidates, recordDiscoverySourceHealth } from "../_shared/discovery-candidate-processing.js";
 import { fetchNewsCandidates } from "../_shared/news-search-provider.js";
+import { buildLocalIntentQueries } from "../_shared/local-intent-queries.js";
 const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type, x-leadpilot-worker-token","Access-Control-Allow-Methods":"POST, OPTIONS"};
 const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...cors,"Content-Type":"application/json"}});
 const clean=(s:string)=>String(s||"").toLowerCase().replace(/\s+/g," ").trim().slice(0,600);
@@ -16,8 +17,16 @@ Deno.serve(async(req)=>{
  const admin=createClient(url,service);
  const auth=await admin.rpc("verify_leadpilot_discovery_worker_token",{p_token:token});
  if(auth.error||auth.data!==true)return json({error:"Unauthorized"},401);
- const {data:source}=await admin.from("ai_discovery_sources").select("enabled,terms_reviewed").eq("source_key","gdelt_free_news_search").maybeSingle();
- const approved=!!source?.enabled&&!!source?.terms_reviewed;
+ const {data:sourceCatalog,error:sourceCatalogError}=await admin.from("ai_discovery_sources").select("source_key,enabled,terms_reviewed,requires_credentials");
+ if(sourceCatalogError)return json({error:"Discovery source catalog unavailable"},503);
+ const sourceByKey=new Map((sourceCatalog||[]).map((source:any)=>[source.source_key,source]));
+ const isApproved=(key:string)=>{const source=sourceByKey.get(key);return !!source?.enabled&&!!source?.terms_reviewed;};
+ const approved=isApproved("gdelt_free_news_search");
+ const rssApproved=isApproved("google_news_rss");
+ const searxngApproved=isApproved("searxng_self_hosted")&&!!Deno.env.get("SEARXNG_URL");
+ const tavilyApproved=isApproved("tavily_search")&&!!Deno.env.get("TAVILY_API_KEY");
+ const braveApproved=isApproved("brave_public_web_search")&&!!Deno.env.get("BRAVE_SEARCH_API_KEY");
+ const anySearchApproved=approved||rssApproved||searxngApproved||tavilyApproved||braveApproved;
  const claim=await admin.rpc("claim_leadpilot_discovery_jobs",{p_limit:1});
  if(claim.error)return json({error:claim.error.message},500);
  const jobs=claim.data||[],reports=[];
@@ -29,33 +38,52 @@ Deno.serve(async(req)=>{
     admin.from("ai_discovery_configs").select("*").eq("business_id",job.business_id).eq("status","active").single()
    ]);
    if(bErr||!biz||cErr||!cfg)throw new Error("Business or active discovery configuration missing");
-   const inserted=await admin.from("ai_discovery_runs").insert({business_id:biz.id,config_id:cfg.id,status:"running",started_at:start,source_name:approved?"Scheduled free news search":"Scheduled internal check"}).select("id").single();
+   const inserted=await admin.from("ai_discovery_runs").insert({business_id:biz.id,config_id:cfg.id,status:"running",started_at:start,source_name:anySearchApproved?"Scheduled public search":"Scheduled internal check"}).select("id").single();
    if(inserted.error)throw inserted.error;runId=inserted.data.id;
    const [{count:leadCount},{count:verifiedCount}]=await Promise.all([
     admin.from("leads").select("id",{count:"exact",head:true}).eq("business_id",biz.id),
     admin.from("ai_discovery_signals").select("id",{count:"exact",head:true}).eq("business_id",biz.id).eq("verification_status","verified")
    ]);
    const category=biz.niche||biz.business_type||biz.name,area=cfg.area||biz.location||"India";
-   const query='"'+category+'" "'+area+'"';
-   const keywordQueries=(cfg.keywords||[]).filter(Boolean).slice(0,1).flatMap((keyword:string)=>['"'+keyword+'" "'+area+'" "looking for"','"'+keyword+'" "'+area+'" "request quote"']);
-   const searchQueries=[query,...keywordQueries];
+   const searchQueries=buildLocalIntentQueries({niche:biz.niche,businessType:biz.business_type,businessName:biz.name,services:biz.services||[],area,keywords:cfg.keywords||[],maxQueries:4});
    const terms=[biz.niche,biz.business_type,...(biz.services||[]),...(cfg.keywords||[])].filter(Boolean).map((t:string)=>String(t).toLowerCase()).filter((t:string)=>t.length>=3);
-   let savedCount=0,articles:any[]=[],provider="none",externalStatus=approved?"connected":"source_disabled",errorText=approved?"":"Free news source disabled or terms review incomplete.";
-   if(approved){
+   let savedCount=0,articles:any[]=[],provider="none",externalStatus=anySearchApproved?"connected":"source_disabled",errorText=anySearchApproved?"":"No approved/configured public search provider.",sourceHealthWarnings:string[]=[];
+   if(anySearchApproved){
     try{
-     const search=await fetchNewsCandidates(searchQueries,{maxRecords:20,timespan:"7d"});
-     for(const source of [{key:"gdelt_free_news_search",name:"GDELT Project",prefix:"GDELT"},{key:"google_news_rss",name:"Google News RSS",prefix:"Google News RSS"}]){
-      const used=search.providers.includes(source.name),failed=search.errors.some((e:string)=>e.startsWith(source.prefix));
-      await recordDiscoverySourceHealth({admin,businessId:biz.id,sourceKey:source.key,status:failed?(used?"degraded":"failed"):(used?"healthy":"no_results"),successful:used||!failed,notes:search.errors.filter((e:string)=>e.startsWith(source.prefix)).join("; ")||(!used?"No matching articles in search window":"Provider returned articles")});
+     const search=await fetchNewsCandidates(searchQueries,{maxRecords:20,timespan:"7d",googleNewsRssEnabled:rssApproved,searxngUrl:searxngApproved?(Deno.env.get("SEARXNG_URL")||""):"",tavilyApiKey:tavilyApproved?(Deno.env.get("TAVILY_API_KEY")||""):"",braveApiKey:braveApproved?(Deno.env.get("BRAVE_SEARCH_API_KEY")||""):""});
+     for(const source of [
+      {key:"gdelt_free_news_search",name:"GDELT Project",prefix:"GDELT",approved},
+      {key:"brave_public_web_search",name:"Brave Search",prefix:"Brave Search",approved:braveApproved},
+      {key:"google_news_rss",name:"Google News RSS",prefix:"Google News RSS",approved:rssApproved},
+      {key:"searxng_self_hosted",name:"SearXNG",prefix:"SearXNG",approved:searxngApproved},
+      {key:"tavily_search",name:"Tavily",prefix:"Tavily",approved:tavilyApproved}
+     ]){
+      const used=search.providers.includes(source.name),succeeded=search.providerSuccesses.includes(source.name),failed=search.errors.some((e:string)=>e.startsWith(source.prefix));
+      const status=!source.approved?"disabled":failed?(succeeded?"degraded":"failed"):(succeeded?(used?"healthy":"no_results"):"not_connected");
+      const notes=!source.approved?"Source not enabled/terms-reviewed or required credential missing":search.errors.filter((e:string)=>e.startsWith(source.prefix)).join("; ")||(used?"Provider returned articles":(succeeded?"Provider connected; no matching articles":"Provider was not successfully reached"));
+      const healthSaved=await recordDiscoverySourceHealth({admin,businessId:biz.id,sourceKey:source.key,status,successful:source.approved&&succeeded,notes});
+      if(!healthSaved)sourceHealthWarnings.push(source.name+" health status could not be saved");
      }
      articles=search.results;provider=search.providers.join(" + ")||"none";
-     if(!articles.length&&search.errors.length)throw new Error(search.errors.join("; "));
+     if(!articles.length&&!search.providerSuccesses.length)throw new Error(search.errors.join("; ")||"All discovery providers failed");
+     externalStatus=search.errors.length?"degraded":"connected";
+     errorText=search.errors.join("; ");
      const candidates=articles.map((result:any)=>({title:String(result.title||""),url:String(result.url||""),domain:String(result.domain||""),date:String(result.date||"")}));
      savedCount=await saveDiscoveryCandidates({admin,businessId:biz.id,runId:runId as string,candidates,terms,mode:"title_explicit",sourceName:provider+" (free search)",maxCandidates:20});
     }catch(e){externalStatus="error";errorText=e instanceof Error?e.message:String(e);}
+   }else{
+    for(const source of [
+     {key:"gdelt_free_news_search",name:"GDELT Project"},
+     {key:"google_news_rss",name:"Google News RSS"},
+     {key:"searxng_self_hosted",name:"SearXNG"},
+     {key:"tavily_search",name:"Tavily"}
+    ]){
+     const healthSaved=await recordDiscoverySourceHealth({admin,businessId:biz.id,sourceKey:source.key,status:"disabled",successful:false,notes:"Source is disabled or terms review is incomplete"});
+     if(!healthSaved)sourceHealthWarnings.push(source.name+" health status could not be saved");
+    }
    }
    const completed=new Date().toISOString();
-   const report={business_name:biz.name,existing_real_enquiries:leadCount||0,verified_intent_signals:verifiedCount||0,pending_search_candidates:savedCount,external_search_status:externalStatus,external_search_error:errorText,provider,queries:approved?searchQueries:[],note:approved?"Public news results are weak signals, not confirmed buyer intent. Data source attribution: GDELT Project and/or Google News RSS. Pending verification only.":"No external provider active; no fabricated leads or signals created."};
+   const report={business_name:biz.name,existing_real_enquiries:leadCount||0,verified_intent_signals:verifiedCount||0,pending_search_candidates:savedCount,external_search_status:externalStatus,external_search_error:errorText,provider_health_warnings:sourceHealthWarnings,provider,queries:approved?searchQueries:[],note:anySearchApproved?"Public search results are weak signals, not confirmed buyer intent. Contact details are not scraped; pending verification only.":"No external provider active; no fabricated leads or signals created."};
    await admin.from("ai_discovery_runs").update({status:externalStatus==="error"?"failed":"completed",completed_at:completed,signals_found:savedCount,leads_created:0,source_name:provider||"Scheduled internal check",error_summary:errorText||report.note}).eq("id",runId);
    await admin.from("ai_discovery_jobs").update({status:externalStatus==="error"?"failed":"completed",completed_at:completed,next_retry_at:externalStatus==="error"?new Date(Date.now()+Math.min(60,10*(job.attempts||1))*60000).toISOString():null,error_message:errorText||null,metadata:{...(job.metadata||{}),report}}).eq("id",job.id);
    reports.push({job_id:job.id,run_id:runId,report});

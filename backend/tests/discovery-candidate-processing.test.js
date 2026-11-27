@@ -46,7 +46,7 @@ test("title-only scheduled mode rejects broad text questions and unrelated artic
   const saved = await saveDiscoveryCandidates({
     admin, businessId: "biz-2", runId: "run-2",
     candidates: [
-      { title: "Looking for a furniture supplier", url: "https://example.com/one", domain: "example.com", date: "2026-11-27" },
+      { title: "Looking for a furniture supplier", url: "https://example.com/one", domain: "example.com", date: "unknown-date" },
       { title: "Where is the best furniture shop?", url: "https://example.com/two" },
       { title: "Furniture company launches new product", url: "https://example.com/three" }
     ],
@@ -120,4 +120,90 @@ test("provider health upsert resets failures on success and keeps disabled sourc
   assert.equal(calls[0].payload.last_success_at,calls[0].payload.last_checked_at);
   assert.equal(calls[1].payload.consecutive_failures,3);
   assert.equal(calls[1].payload.last_success_at,"2026-11-01T00:00:00Z");
+});
+
+test("candidate score gives a freshness bonus for recent source dates but not stale evidence", async () => {
+  const recentAdmin = mockAdmin();
+  const staleAdmin = mockAdmin();
+  const today = new Date().toISOString().slice(0, 10);
+  const recent = await saveDiscoveryCandidates({
+    admin: recentAdmin, businessId: "biz-recent",
+    candidates: [{ title: "Looking for furniture supplier", url: "https://example.com/recent", snippet: "Need furniture", date: today }],
+    terms: ["furniture"], mode: "text_intent"
+  });
+  const stale = await saveDiscoveryCandidates({
+    admin: staleAdmin, businessId: "biz-stale",
+    candidates: [{ title: "Looking for furniture supplier", url: "https://example.com/stale", snippet: "Need furniture", date: "2020-01-01" }],
+    terms: ["furniture"], mode: "text_intent"
+  });
+  assert.equal(recent, 1);
+  assert.equal(stale, 1);
+  assert.ok(recentAdmin.records[0].payload.score > staleAdmin.records[0].payload.score);
+  assert.equal(recentAdmin.records[0].payload.verification_status, "pending");
+  assert.equal(staleAdmin.records[0].payload.verification_status, "pending");
+});
+
+test("candidate URLs canonicalize tracking parameters and fragments before dedupe", async () => {
+  const admin = mockAdmin();
+  const saved = await saveDiscoveryCandidates({
+    admin, businessId: "biz-url-dedupe",
+    candidates: [
+      { title: "Looking for furniture supplier", url: "https://Example.com/request/?utm_source=feed&fbclid=abc#post", snippet: "Need furniture" },
+      { title: "duplicate tracking variant", url: "https://example.com/request?utm_campaign=other", snippet: "Looking for furniture" }
+    ],
+    terms: ["furniture"], mode: "text_intent"
+  });
+  assert.equal(saved, 1);
+  assert.equal(admin.records.length, 1);
+  assert.equal(admin.records[0].payload.source_url, "https://example.com/request");
+});
+
+test("candidate save limit is bounded and only processes the configured first candidates", async () => {
+  const admin = mockAdmin();
+  const candidates = Array.from({ length: 5 }, (_, i) => ({
+    title: "Looking for furniture supplier",
+    url: `https://example.com/item-${i}`,
+    snippet: "Need furniture"
+  }));
+  const saved = await saveDiscoveryCandidates({
+    admin, businessId: "biz-limit", candidates, terms: ["furniture"], maxCandidates: 2
+  });
+  assert.equal(saved, 2);
+  assert.equal(admin.records.length, 2);
+});
+
+test("future-dated evidence does not receive a freshness bonus", async () => {
+  const futureAdmin = mockAdmin();
+  const staleAdmin = mockAdmin();
+  const future = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+  const futureSaved = await saveDiscoveryCandidates({
+    admin: futureAdmin, businessId: "biz-future",
+    candidates: [{ title: "Looking for furniture supplier", url: "https://example.com/future", snippet: "Need furniture", date: future }],
+    terms: ["furniture"], mode: "text_intent"
+  });
+  const staleSaved = await saveDiscoveryCandidates({
+    admin: staleAdmin, businessId: "biz-stale-compare",
+    candidates: [{ title: "Looking for furniture supplier", url: "https://example.com/stale-compare", snippet: "Need furniture", date: "2020-01-01" }],
+    terms: ["furniture"], mode: "text_intent"
+  });
+  assert.equal(futureSaved, 1);
+  assert.equal(staleSaved, 1);
+  assert.equal(futureAdmin.records[0].payload.score, staleAdmin.records[0].payload.score);
+});
+
+
+test("source health maps no-results and invalid statuses to database-safe values", async () => {
+  const calls=[];
+  const admin={from(table){assert.equal(table,"ai_discovery_source_health");return {
+    select(){return {eq(){return {eq(){return {maybeSingle:async()=>({data:{consecutive_failures:2,last_success_at:null},error:null})}}}}}},
+    upsert(payload){calls.push(payload);return {error:null};}
+  }}};
+  const ok=await recordDiscoverySourceHealth({admin,businessId:"biz-health-status",sourceKey:"gdelt_free_news_search",status:"no_results",successful:true,notes:"empty result set"});
+  const bad=await recordDiscoverySourceHealth({admin,businessId:"biz-health-status",sourceKey:"gdelt_free_news_search",status:"unexpected_status",successful:false,notes:"provider check"});
+  assert.equal(ok,true);assert.equal(bad,true);
+  assert.equal(calls[0].status,"healthy");
+  assert.match(calls[0].notes,/No results returned/);
+  assert.equal(calls[0].consecutive_failures,0);
+  assert.equal(calls[1].status,"not_connected");
+  assert.equal(calls[1].consecutive_failures,2);
 });
