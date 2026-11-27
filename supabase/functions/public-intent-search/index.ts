@@ -51,8 +51,8 @@ Deno.serve(async(req)=>{
  const searched=await fetchNewsCandidates(queryList,{maxRecords:12,timespan:"7d",googleNewsRssEnabled:rssApproved,searxngUrl:searxngApproved?(Deno.env.get("SEARXNG_URL")||""):"",tavilyApiKey:tavilyApproved?(Deno.env.get("TAVILY_API_KEY")||""):""});
  for(const source of [{key:"gdelt_free_news_search",name:"GDELT Project",prefix:"GDELT",approved:gdeltApproved},{key:"google_news_rss",name:"Google News RSS",prefix:"Google News RSS",approved:rssApproved},{key:"searxng_self_hosted",name:"SearXNG",prefix:"SearXNG",approved:searxngApproved},{key:"tavily_search",name:"Tavily",prefix:"Tavily",approved:tavilyApproved}]){
   const used=searched.providers.includes(source.name),succeeded=searched.providerSuccesses.includes(source.name),failed=searched.errors.some((e:string)=>e.startsWith(source.prefix));
-  const status=!source.approved?"disabled":failed?(succeeded?"degraded":"failed"):(succeeded?(searched.results.length?"healthy":"no_results"):"not_connected");
-  const notes=!source.approved?"Provider disabled or terms review/credentials incomplete":searched.errors.filter((e:string)=>e.startsWith(source.prefix)).join("; ")||(!succeeded?"Provider was not successfully reached":(searched.results.length?"Provider returned results":"Provider connected; no matching results"));
+  const status=!source.approved?"disabled":failed?(succeeded?"degraded":"failed"):(succeeded?(used?"healthy":"no_results"):"not_connected");
+  const notes=!source.approved?"Provider disabled or terms review/credentials incomplete":searched.errors.filter((e:string)=>e.startsWith(source.prefix)).join("; ")||(!succeeded?"Provider was not successfully reached":(used?"Provider returned results":"Provider connected; no matching results"));
   const healthSaved=await recordDiscoverySourceHealth({admin:healthAdmin,businessId,sourceKey:source.key,status,successful:source.approved&&succeeded,notes});
   if(!healthSaved)healthWarnings.push(source.name+" health status could not be saved");
  }
