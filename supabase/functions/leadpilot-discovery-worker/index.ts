@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-import { saveDiscoveryCandidates } from "../_shared/discovery-candidate-processing.js";
+import { saveDiscoveryCandidates, recordDiscoverySourceHealth } from "../_shared/discovery-candidate-processing.js";
 import { fetchNewsCandidates } from "../_shared/news-search-provider.js";
 const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type, x-leadpilot-worker-token","Access-Control-Allow-Methods":"POST, OPTIONS"};
 const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...cors,"Content-Type":"application/json"}});
@@ -44,6 +44,10 @@ Deno.serve(async(req)=>{
    if(approved){
     try{
      const search=await fetchNewsCandidates(searchQueries,{maxRecords:20,timespan:"7d"});
+     for(const source of [{key:"gdelt_free_news_search",name:"GDELT Project",prefix:"GDELT"},{key:"google_news_rss",name:"Google News RSS",prefix:"Google News RSS"}]){
+      const used=search.providers.includes(source.name),failed=search.errors.some((e:string)=>e.startsWith(source.prefix));
+      await recordDiscoverySourceHealth({admin,businessId:biz.id,sourceKey:source.key,status:failed?(used?"degraded":"failed"):(used?"healthy":"no_results"),successful:used||!failed,notes:search.errors.filter((e:string)=>e.startsWith(source.prefix)).join("; ")||(!used?"No matching articles in search window":"Provider returned articles")});
+     }
      articles=search.results;provider=search.providers.join(" + ")||"none";
      if(!articles.length&&search.errors.length)throw new Error(search.errors.join("; "));
      const candidates=articles.map((result:any)=>({title:String(result.title||""),url:String(result.url||""),domain:String(result.domain||""),date:String(result.date||"")}));
