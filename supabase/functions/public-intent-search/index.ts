@@ -16,7 +16,7 @@ Deno.serve(async(req)=>{
  let body;try{body=await req.json()}catch{return json({error:"Invalid JSON"},400)}
  const businessId=body.business_id;if(!businessId)return json({error:"business_id required"},400);
  const {data:business,error:bErr}=await client.from("businesses").select("id,name,owner_user_id,business_type,niche,description,location,services,audience").eq("id",businessId).single();
- if(bErr||business.owner_user_id!==user.id)return json({error:"Business access denied"},403);
+ if(bErr||!business||business.owner_user_id!==user.id)return json({error:"Business access denied"},403);
  const {data:source,error:sourceErr}=await client.from("ai_discovery_sources").select("enabled,terms_reviewed").eq("source_key","gdelt_free_news_search").maybeSingle();
  if(sourceErr)return json({status:"source_catalog_error",error:"Source permission status could not be checked; search blocked."},503);
  if(!source?.enabled||!source?.terms_reviewed)return json({status:"provider_disconnected",error:"Free news source disabled pending terms review."},403);
@@ -49,8 +49,8 @@ Deno.serve(async(req)=>{
    if(!rssArticles.length)return json({status:"provider_error",message:"Free Google News RSS returned no results."},502);
    articles=rssArticles;provider="Google News RSS fallback";
   }
-  const uniqueMap=new Map<string,{title:string,url:string,domain:string,date:string}>();
-  for(const item of articles){try{const u=new URL(item.url);if(!["http:","https:"].includes(u.protocol))continue;uniqueMap.set(u.href,{title:item.title||"",url:u.href,domain:item.domain||u.hostname,date:item.seendate||item.date||""});}catch{}}
+  const uniqueMap=new Map<string,{title:string,url:string,domain:string,date:string,description:string}>();
+  for(const item of articles){try{const u=new URL(item.url);if(!["http:","https:"].includes(u.protocol))continue;uniqueMap.set(u.href,{title:item.title||"",url:u.href,domain:item.domain||u.hostname,date:item.seendate||item.date||"",description:item.description||item.snippet||""});}catch{}}
   const unique=[...uniqueMap.values()];
   results=unique.slice(0,25).map(r=>({query,title:r.title,url:r.url,snippet:r.description||"",source_domain:r.domain,date:r.date}));
  }catch{return json({status:"provider_error",message:"Free search provider and RSS fallback connection failed."},502);}
