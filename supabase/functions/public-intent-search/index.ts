@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 import { fetchNewsCandidates } from "../_shared/news-search-provider.js";
+import { buildLocalIntentQueries } from "../_shared/local-intent-queries.js";
 import { saveDiscoveryCandidates, recordDiscoverySourceHealth } from "../_shared/discovery-candidate-processing.js";
 const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type","Access-Control-Allow-Methods":"POST, OPTIONS"};
 const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...cors,"Content-Type":"application/json"}});
@@ -33,10 +34,9 @@ Deno.serve(async(req)=>{
   return json({status:savedCount?"saved_pending_review":"not_relevant",saved_count:savedCount,warning:"Candidate saved as pending verification only; it is not a verified lead."});
  }
  const {data:cfg}=await client.from("ai_discovery_configs").select("keywords").eq("business_id",businessId).maybeSingle();
- const configuredKeywords:string[]=(cfg?.keywords||[]).filter(Boolean).slice(0,2);
  const niche=business.niche||business.business_type||business.name,area=body.area||business.location||"India";
  const serviceTerms=(business.services||[]).filter(Boolean).slice(0,4).join(" ")||niche;
- const queryList=[`"${niche}" "${area}"`,`"${serviceTerms}" "${area}"`,`"${niche}" "${area}" "looking for"`,`"${serviceTerms}" "${area}" "request quote"`,...configuredKeywords.map((k:string)=>`"${k}" "${area}" "looking for"`)].filter((q,i,a)=>a.indexOf(q)===i);
+ const queryList=buildLocalIntentQueries({niche,businessType:business.business_type,businessName:business.name,services:business.services||[],area,keywords:cfg?.keywords||[],maxQueries:8});
  const provider="GDELT Project and/or Google News RSS";
  type Candidate={query:string,title:string,url:string,domain:string,date:string};
  const searched=await fetchNewsCandidates(queryList,{maxRecords:12,timespan:"7d"});
