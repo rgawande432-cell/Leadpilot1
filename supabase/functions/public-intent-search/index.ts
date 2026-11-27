@@ -19,9 +19,15 @@ Deno.serve(async(req)=>{
  const businessId=body.business_id;if(!businessId)return json({error:"business_id required"},400);
  const {data:business,error:bErr}=await client.from("businesses").select("id,name,owner_user_id,business_type,niche,description,location,services,audience").eq("id",businessId).single();
  if(bErr||business.owner_user_id!==user.id)return json({error:"Business access denied"},403);
- const {data:source,error:sourceErr}=await client.from("ai_discovery_sources").select("enabled,terms_reviewed").eq("source_key","gdelt_free_news_search").maybeSingle();
+ const {data:sourceCatalog,error:sourceErr}=await client.from("ai_discovery_sources").select("source_key,enabled,terms_reviewed,requires_credentials");
  if(sourceErr)return json({status:"source_catalog_error",error:"Source permission status could not be checked; search blocked."},503);
- if(!source?.enabled||!source?.terms_reviewed)return json({status:"provider_disconnected",error:"Free news source disabled pending terms review."},403);
+ const sourceByKey=new Map((sourceCatalog||[]).map((s:any)=>[s.source_key,s]));
+ const approved=(key:string)=>{const s=sourceByKey.get(key);return !!s?.enabled&&!!s?.terms_reviewed;};
+ const gdeltApproved=approved("gdelt_free_news_search");
+ const rssApproved=approved("google_news_rss");
+ const searxngApproved=approved("searxng_self_hosted")&&!!Deno.env.get("SEARXNG_URL");
+ const tavilyApproved=approved("tavily_search")&&!!Deno.env.get("TAVILY_API_KEY");
+ if(!gdeltApproved&&!rssApproved&&!searxngApproved&&!tavilyApproved)return json({status:"provider_disconnected",error:"No public search provider is enabled, terms-reviewed, and configured."},403);
  if(body.action==="save"){
   const candidate=body.candidate;
   if(!candidate||typeof candidate!=="object")return json({error:"candidate required"},400);
@@ -39,10 +45,12 @@ Deno.serve(async(req)=>{
  const queryList=buildLocalIntentQueries({niche,businessType:business.business_type,businessName:business.name,services:business.services||[],area,keywords:cfg?.keywords||[],maxQueries:8});
  const provider="GDELT Project and/or Google News RSS";
  type Candidate={query:string,title:string,url:string,domain:string,date:string};
- const searched=await fetchNewsCandidates(queryList,{maxRecords:12,timespan:"7d",searxngUrl:Deno.env.get("SEARXNG_URL")||"",tavilyApiKey:Deno.env.get("TAVILY_API_KEY")||""});
- for(const source of [{key:"gdelt_free_news_search",name:"GDELT Project",prefix:"GDELT"},{key:"google_news_rss",name:"Google News RSS",prefix:"Google News RSS"},{key:"searxng_self_hosted",name:"SearXNG",prefix:"SearXNG"},{key:"tavily_search",name:"Tavily",prefix:"Tavily"}]){
-  const used=searched.providers.includes(source.name),failed=searched.errors.some((e:string)=>e.startsWith(source.prefix));
-  await recordDiscoverySourceHealth({admin:client,businessId,sourceKey:source.key,status:failed?(used?"degraded":"failed"):(used?"healthy":"no_results"),successful:used||!failed,notes:searched.errors.filter((e:string)=>e.startsWith(source.prefix)).join("; ")||(!used?"No matching articles in search window":"Provider returned articles")});
+ const searched=await fetchNewsCandidates(queryList,{maxRecords:12,timespan:"7d",googleNewsRssEnabled:rssApproved,searxngUrl:searxngApproved?(Deno.env.get("SEARXNG_URL")||""):"",tavilyApiKey:tavilyApproved?(Deno.env.get("TAVILY_API_KEY")||""):""});
+ for(const source of [{key:"gdelt_free_news_search",name:"GDELT Project",prefix:"GDELT",approved:gdeltApproved},{key:"google_news_rss",name:"Google News RSS",prefix:"Google News RSS",approved:rssApproved},{key:"searxng_self_hosted",name:"SearXNG",prefix:"SearXNG",approved:searxngApproved},{key:"tavily_search",name:"Tavily",prefix:"Tavily",approved:tavilyApproved}]){
+  const used=searched.providers.includes(source.name),succeeded=searched.providerSuccesses.includes(source.name),failed=searched.errors.some((e:string)=>e.startsWith(source.prefix));
+  const status=!source.approved?"disabled":failed?(succeeded?"degraded":"failed"):(succeeded?"healthy":"no_results");
+  const notes=!source.approved?"Provider disabled or terms review/credentials incomplete":searched.errors.filter((e:string)=>e.startsWith(source.prefix)).join("; ")||(!succeeded?"No results or provider not reached":"Provider returned results");
+  await recordDiscoverySourceHealth({admin:client,businessId,sourceKey:source.key,status,successful:source.approved&&succeeded,notes});
  }
  if(!searched.results.length&&searched.errors.length)return json({status:"provider_error",message:"Public search providers could not be reached."},502);
  const results=searched.results.slice(0,25).map(r=>({query:r.query,title:r.title,url:r.url,snippet:"",source_domain:r.domain,date:r.date}));
