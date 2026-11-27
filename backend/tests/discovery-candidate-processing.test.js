@@ -94,3 +94,15 @@ test("owner-reviewed manual candidates save without a scan run id", async () => 
   assert.equal(admin.records[0].payload.run_id, null);
   assert.equal(admin.records[0].payload.verification_status, "pending");
 });
+
+test("keyword matching uses token boundaries and punctuation normalization", async () => {
+  const admin = mockAdmin();
+  const saved = await saveDiscoveryCandidates({
+    admin, businessId: "biz-5", candidates: [
+      { title: "Looking for furniture!", url: "https://example.com/punct", snippet: "Need furniture, urgently" }
+    ],
+    terms: ["art"], mode: "text_intent", sourceName: "Boundary test"
+  });
+  assert.equal(saved, 0);
+  assert.equal(admin.records.length, 0);
+});
