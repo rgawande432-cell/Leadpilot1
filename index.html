@@ -352,8 +352,8 @@ biz=p.data;
 if(!biz){fill();show('businessModal');return;}
 show('dashboard');$('welcome').textContent='Welcome, '+biz.name;$('heroProfile').textContent='Saved';ideas();radarSetup();activationSetup();bindAddedFeatures();
 const q=await db.from('leads').select('id,name,email,phone,message,source,status,score,intent_level,score_breakdown,score_reasons,score_disclaimer,created_at,evidence_url,intent_summary,qualification_status,followup_at,qualification_notes').eq('business_id',biz.id).order('created_at',{ascending:false});
-if(q.error){$('leadRows').textContent='Could not load enquiries: '+q.error.message;return;}
-const ls=q.data||[],fresh=ls.filter(x=>x.status==='New').length;
+const crmLoadError=q.error?.message||'';if(q.error){$('leadRows').textContent='Could not load enquiries: '+q.error.message;$('leadInsights').textContent='CRM insights are unavailable until the enquiry query issue is fixed.';}
+const ls=q.error?[]:(q.data||[]),fresh=ls.filter(x=>x.status==='New').length;
 // Data-driven Growth Advisor: recommendations use only real profile/CRM records.
 const growthActions=[];
 const profileMissing=['business_type','niche','location','description','phone'].filter(k=>!String(biz[k]||'').trim());
