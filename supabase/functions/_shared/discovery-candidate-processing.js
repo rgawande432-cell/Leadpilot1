@@ -1,7 +1,7 @@
 // Shared discovery candidate filtering, intent classification, deduplication and persistence.
 // Provider adapters (Brave, GDELT, Google News RSS) remain separate; signal policy is canonical here.
 /** @param {any} value */
-const normalize = (value = "") => String(value || "").toLowerCase().replace(/[^\\p{L}\\p{N}]+/gu, " ").replace(/\\s+/g, " ").trim().slice(0, 600);
+const normalize = (value = "") => String(value || "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").replace(/\s+/g, " ").trim().slice(0, 600);
 
 /** Canonicalize common tracking variants so one public post/article is not saved repeatedly. */
 function canonicalizeUrl(value = "") {
@@ -29,7 +29,7 @@ function freshnessBonus(value = "") {
   const raw = String(value || "").trim();
   if (!raw) return 0;
   let date = new Date(raw);
-  if (!Number.isFinite(date.getTime()) && /^\\d{8}$/.test(raw)) {
+  if (!Number.isFinite(date.getTime()) && /^\d{8}$/.test(raw)) {
     date = new Date(raw.slice(0, 4) + "-" + raw.slice(4, 6) + "-" + raw.slice(6, 8) + "T00:00:00Z");
   }
   if (!Number.isFinite(date.getTime())) return 0;
