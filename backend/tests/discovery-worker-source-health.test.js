@@ -39,6 +39,6 @@ test("public intent search gates optional providers on approval and configured c
 test("public search provider health records distinguish disabled, success and no-results",async()=>{
   const search=await readFile(resolve(root,"supabase/functions/public-intent-search/index.ts"),"utf8");
   assert.match(search,/const status=!source\.approved\?"disabled":failed\?/);
-  assert.match(search,/succeeded\?"healthy":"no_results"/);
-  assert.match(search,/successful:source\.approved&&succeeded/);
+  assert.match(search,/succeeded\?\(searched\.results\.length\?"healthy":"no_results"\):"not_connected"/);
+  assert.match(search,/successful:source\.approved&&succeeded/);\n  assert.match(search,/healthAdmin=service\?createClient\(url,service\):client/);\n  assert.match(search,/provider_health_warnings:healthWarnings/);
 });
