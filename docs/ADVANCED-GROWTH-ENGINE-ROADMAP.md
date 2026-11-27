@@ -1,6 +1,6 @@
 # UrbanLeads by UrbanBuying — Growth Engine Status
 
-Status snapshot: 27 November 2026. Continue from existing code; do not reset completed work.
+Status snapshot: 27 November 2026. Continue from existing code; do not reset completed work. Current Cloudflare deployment and DNS status were updated after the owner connected the zone.
 
 ## Implemented foundation
 - Business profile and owner-scoped data; website optional.
@@ -18,7 +18,7 @@ Status snapshot: 27 November 2026. Continue from existing code; do not reset com
 - [x] Lead validation, spam protection, duplicate detection and owner-scoped CRM flow implemented.
 - [x] Discovery source/provider status gating implemented.
 - [ ] End-to-end owner signup/email confirmation and live public-enquiry-to-CRM verification: requires accessible current deployment and test account.
-- [ ] Live deployment smoke-test: blocked while Render quota/deployment is unavailable and Cloudflare Pages account deployment authorization is not completed.
+- [ ] Live deployment smoke-test: Cloudflare Worker is reachable at `https://leadpilot1.rgawande432.workers.dev/`, but full signup/enquiry smoke tests and confirmation that GitHub pushes auto-deploy to this Worker are still pending.
 
 ## Phase B — Growth Advisor
 - [x] Dashboard recommendations from saved profile and actual CRM data.
@@ -50,8 +50,8 @@ Status snapshot: 27 November 2026. Continue from existing code; do not reset com
 - [ ] Response-time and weekly conversion reporting: not yet implemented; requires reliable timestamps/outcome data and additional analytics work.
 
 ## External deployment/account blockers (not code tasks)
-- Cloudflare Pages: deployment/account authorization is not available to the current tools. GitHub repository and setup guide are ready; Pages deployment must be authorized in the Cloudflare dashboard.
-- Render: deployment usage/quota issue previously blocked new deployment. The code continues to be committed to GitHub.
+- Cloudflare Worker `leadpilot1`: deployed and reachable at `https://leadpilot1.rgawande432.workers.dev/`. `urbanbuying.com` zone is Active in Cloudflare, but the Worker custom domain is not attached yet; dashboard currently does not expose the expected Custom Domain action. Git-based auto-deploy is also not yet verified.
+- Render: previous deployment usage/quota issue remains a historical blocker; Cloudflare workers.dev is the current accessible frontend URL.
 - Meta: account contact verification is unresolved; social OAuth/publishing is intentionally paused.
 
 ## Integrity / launch rules
