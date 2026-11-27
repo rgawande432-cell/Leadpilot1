@@ -121,3 +121,7 @@ This document is the development guardrail: **upgrade the canonical feature inst
 - Canonical shared helper now upserts per-business/per-provider health into `ai_discovery_source_health`, tracks last check/success, status, notes and consecutive failures.
 - Public-news search and scheduled worker record GDELT and Google News RSS outcomes; manual Brave scans record disabled/healthy/failed states without treating disabled credentials as failures.
 - Regression test added for failure-count reset on success and no increment when source is disabled.
+
+- Engine Health dashboard now reads owner-scoped `ai_discovery_source_health` records and displays provider status, failure streak, last check/success and notes. (UI commit 2ccb6127; all code checks passed.)
+- Live Supabase deployment verification: `public-intent-search` v11, `leadpilot-discovery-worker` v14, `process-discovery-scan` v10 are ACTIVE.
+- Vercel preview build quota is exhausted (100 deployments/day). Current preview at commit 622531c is READY but the latest branch commit cannot be deployed until the quota resets; production project is not live.
