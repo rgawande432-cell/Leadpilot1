@@ -66,7 +66,7 @@ This document is the development guardrail: **upgrade the canonical feature inst
 
 - Cron workers are active: queue worker every 5 minutes; due-scan enqueue every 30 minutes; retry scan every 10 minutes; follow-up reminders every 15 minutes; rate-limit cleanup daily.
 - Source catalog: GDELT/Google News fallback and manual verified signals are enabled; Brave API, opt-in channels and third-party integrations remain disabled pending credentials/terms review.
-- Recent runs returned zero pending candidate signals. Two earlier GDELT runs failed with HTTP 429 and an unexpected response; RSS fallback ran but returned zero saved signals. This is a genuine coverage/provider reliability gap, not a lead-generation success.
+- Recent runs returned zero pending candidate signals. Two earlier GDELT runs failed with HTTP 429 and an unexpected response; RSS fallback ran but returned zero saved signals. The shared provider now stops retrying GDELT after a 429 within the same scan and uses RSS for remaining queries. This is a genuine coverage/provider reliability gap, not a lead-generation success.
 - Owner-triggered scan matching previously omitted configured discovery keywords. It now includes `cfg.keywords` in candidate term matching. Scheduled worker, owner-triggered scan, and public search query paths now also include up to two configured keywords in their search queries.
 - Do not claim guaranteed lead counts. Public articles are weak candidate signals; genuine enquiries are separate and only become prospects/CRM leads after owner verification or consent-based direct enquiry.
 
