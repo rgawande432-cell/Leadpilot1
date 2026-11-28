@@ -29,7 +29,7 @@ Status snapshot: 27 November 2026. Continue from existing code; do not reset com
 - [ ] Persistent completed/dismissed recommendation history: not implemented yet.
 
 ## Phase C — Discovery intelligence
-- [x] Public intent search and discovery worker deployed.
+- [x] Public intent search and discovery worker deployed.\n- [x] Free public-news provider fallback expanded: GDELT → Google News RSS → Bing News RSS (deployed `public-intent-search` v13).
 - [x] Manual evidence/source URL verification before saving intent.
 - [x] Provider status/configuration gating.
 - [x] Keep candidate signals separate from verified intent and actual enquiries.
@@ -37,7 +37,7 @@ Status snapshot: 27 November 2026. Continue from existing code; do not reset com
 - [ ] Full live source-by-source test with configured external providers: provider access/configuration and current deployment needed.
 
 ## Phase D — Marketing automation
-- [x] Business-specific content generation and FAQ workflow.
+- [x] Business-specific content generation and FAQ workflow.\n- [x] Free Hindi/English template mode for posts, FAQs and campaigns (deployed `content-generation` v7).
 - [x] Campaign draft planner and copy workflow.
 - [x] Draft-first review; no fabricated campaign performance.
 - [ ] Automatic Facebook/Instagram publishing: paused until Meta developer-account verification and OAuth app setup.
@@ -73,3 +73,4 @@ Status snapshot: 27 November 2026. Continue from existing code; do not reset com
 - No platform automation without authorization, consent and compliance with platform terms.
 - Website remains optional for business owners.
 - Code or database work is never described as live unless deployment and smoke tests confirm it.
+\n\n## Free-mode improvements — 28 November 2026\n\n- Expanded public-intent search fallback to try Google News RSS then Bing News RSS when GDELT returns no results or an error; source catalog gating remains enabled.\n- Content Studio free templates now support Hindi and English for posts, FAQs and campaign drafts.\n- Both Edge Functions are ACTIVE in production. Authenticated owner flow testing remains pending because no owner test session is available in this environment.\n
