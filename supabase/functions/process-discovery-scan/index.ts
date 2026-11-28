@@ -13,13 +13,13 @@ const xmlDecode = (value: string) => value
   .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
   .replace(/&quot;/g, '"').replace(/&#39;/g, "'");
 
-function parseRss(xml: string) {
+function parseRss(xml: string, providerName = "Google News RSS") {
   return [...xml.matchAll(/<item\b[^>]*>([\s\S]*?)<\/item>/gi)].map((match) => {
     const block = match[1];
     const field = (tag: string) => xmlDecode(
       (block.match(new RegExp("<" + tag + "[^>]*>([\\s\\S]*?)<\\/" + tag + ">", "i")) || [])[1] || ""
     ).trim();
-    return { title: field("title"), url: field("link"), date: field("pubDate"), description: field("description"), domain: "Google News RSS" };
+    return { title: field("title"), url: field("link"), date: field("pubDate"), description: field("description"), domain: providerName };
   }).filter((item) => item.title && item.url);
 }
 
@@ -130,22 +130,29 @@ Deno.serve(async (req) => {
         if (fallbackReason || !articles.length) {
           const rssTerms = [...new Set([category, ...serviceTerms, ...keywordTerms]
             .filter(Boolean).map((value) => String(value).trim()).filter((value) => value.length >= 3))].slice(0, 4);
+          // Search both quoted/niche and broad local terms; recent news can be sparse for small-business niches.
           const rssQueries = [...new Set([
             baseQuery,
             ...rssTerms.map((term) => '"' + term + '" "' + area + '"'),
+            ...rssTerms.slice(0, 2).map((term) => term + " " + area),
             ...rssTerms.slice(0, 2).map((term) => '"' + term + '" (looking for OR need OR quote OR recommend) "' + area + '"'),
-          ])].slice(0, 5);
-          for (const rssQuery of rssQueries) {
-            const rssUrl = new URL("https://news.google.com/rss/search");
-            rssUrl.searchParams.set("q", rssQuery + " when:7d");
-            rssUrl.searchParams.set("hl", "en-IN");
-            rssUrl.searchParams.set("gl", "IN");
-            rssUrl.searchParams.set("ceid", "IN:en");
-            const rss = await fetch(rssUrl, { headers: { "Accept": "application/rss+xml, application/xml, text/xml" } });
-            if (rss.ok) articles.push(...parseRss(await rss.text()));
+          ])].slice(0, 6);
+          const providers = [
+            { name: "Google News RSS", makeUrl: (q: string) => { const u = new URL("https://news.google.com/rss/search"); u.searchParams.set("q", q + " when:30d"); u.searchParams.set("hl", "en-IN"); u.searchParams.set("gl", "IN"); u.searchParams.set("ceid", "IN:en"); return u; } },
+            { name: "Bing News RSS", makeUrl: (q: string) => { const u = new URL("https://www.bing.com/news/search"); u.searchParams.set("q", q); u.searchParams.set("format", "rss"); u.searchParams.set("setlang", "en-IN"); return u; } },
+          ];
+          let rssProvider = "";
+          for (const source of providers) {
+            for (const rssQuery of rssQueries) {
+              try {
+                const rss = await fetch(source.makeUrl(rssQuery), { headers: { "Accept": "application/rss+xml, application/xml, text/xml" } });
+                if (rss.ok) articles.push(...parseRss(await rss.text(), source.name));
+              } catch { /* try the next free RSS query/provider */ }
+            }
+            if (articles.length) { rssProvider = source.name; break; }
           }
-          if (!articles.length) throw new Error((fallbackReason || "GDELT returned no articles") + "; Google News RSS returned no results");
-          provider = "Google News RSS fallback";
+          if (!articles.length) throw new Error((fallbackReason || "GDELT returned no articles") + "; Google and Bing News RSS returned no results for the expanded queries");
+          provider = rssProvider + " fallback";
         }
 
         const unique = [...new Map(articles.filter((item) => item.url).map((item) => [item.url, item])).values()];
