@@ -2,62 +2,42 @@
 
 Updated: 28 November 2026
 
-## Verified infrastructure
+## Automatic lead engine
 
-- Supabase project `hbuttmjdlzqwxlqdkgca`: `ACTIVE_HEALTHY`.
-- All 7 Edge Functions are ACTIVE. Latest key versions:
-  - `leadpilot-discovery-worker`: v22
-  - `content-generation`: v8
-  - `public-intent-search`: v13
-  - `process-discovery-scan`: v14
-  - `provider-status`: v3
-  - `submit-lead`: v9
-  - `public-business-profile`: v2
-- Five cron jobs are active: discovery worker every 5 minutes; enqueue due scans every 30 minutes; retry scans every 10 minutes; follow-up reminders every 15 minutes; rate-limit cleanup daily at 03:00.
-- Two business profiles have active automatic discovery configurations.
-- New business profiles automatically receive active discovery config through a tested database trigger.
-- Current counts: 2 businesses, 2 active configs, 0 CRM enquiries, 0 pending signals, 1 rejected signal, 2 organic content drafts.
+- Supabase project ACTIVE_HEALTHY; 7 Edge Functions active.
+- Discovery worker v24 deployed.
+- New retailer profiles receive active discovery config automatically.
+- Existing 2 businesses have active discovery configs.
+- Scan interval default: 4 hours; queue scheduler every 30 minutes; worker every 5 minutes; retries every 10 minutes.
+- Worker can claim/process 3 jobs concurrently.
+- Free search is RSS-first: Google News RSS and Bing News RSS. GDELT was repeatedly timing out and is disabled for now. Brave Search API remains optional but requires a key.
+- Intent classifier v3 is a local, free, deterministic multilingual rules engine; no paid LLM/API key required. It excludes generic terms and news/event/disruption patterns and requires a meaningful business term plus buying/request signals. AI model classification remains optional and falls back to local rules.
+- Per-business source health and scan status are recorded.
+- Automatic daily organic content drafts save to Content Studio.
 
-## Automatic engine implementation
+## Tests
 
-- Worker v22 claims up to 3 jobs and processes them concurrently.
-- Queries are generated from niche/type, services, profile keywords and local area.
-- Search sources: GDELT, Google News RSS and Bing News RSS; optional Brave Search API is implemented.
-- AI classification and daily organic content generation use GPT-6 Luna when `OPENAI_API_KEY` is available; rules/templates are fallback.
-- Results are URL-deduplicated and strict intent-filtered; public evidence signals are not automatically converted into CRM leads.
-- One organic content draft per business per 24-hour period is generated and saved automatically.
-- Per-business source-health tracking records source status, last check/success, failure count and notes; dashboard health check displays provider health and latest scan.
-- Service-role grants for content drafts and source-health table were fixed and verified.
-- New discovery configs default to active and a 4-hour scan interval.
+- Auto-config trigger test: PASS.
+- RSS search provider scan v23: PASS; RSS results collected. A false-positive rail/news item was found during audit, rejected, and classifier filters tightened.
+- Earlier test: 60 public candidates; strict filter retained none.
+- Automatic content draft: PASS.
+- Parallel queue v21 test: PASS.
+- Provider health tracking: PASS.
+- v24 deploy: ACTIVE. A new v24 test job was queued, but its completion was not confirmed during this update. Do not claim v24 end-to-end scan test passed yet.
+- Current database counts: 2 businesses, 2 active configs, 0 CRM enquiries, 0 pending signals, 2 rejected signals, 2 content drafts.
 
-## Tests completed
+## Production site
 
-1. **Automatic activation trigger — PASS.** Temporary business received active config, goal, area, 4-hour schedule and keywords; temporary profile was deleted.
-2. **Worker v20 scan — PASS.** 60 public results collected; strict filter retained 0 signals and 0 CRM leads.
-3. **False-positive filter — PASS.** An earlier SEO listicle signal was rejected; rankings, listicles, guides and general articles are now research, not buyer intent.
-4. **Automatic content draft — PASS.** Business-specific template post automatically saved to Content Studio.
-5. **Worker v21 parallel processing — PASS.** Two business jobs completed concurrently in about 8 seconds; 0 signals and 0 CRM leads; daily draft creation/skip behavior correct.
-6. **Worker v22 provider health — PASS.** Search and health data saved. RSS: 6/6 successful; GDELT: 0/2 (timeouts); free-news source status `degraded`; Brave `not_connected` (API key missing). 0 signals and 0 CRM leads.
-7. **Runtime logs — PASS.** Worker versions 18, 20, 21 and 22 booted successfully.
+- Automatic motion showcase no longer scrolls the visitor's page. It only highlights cards.
+- The scroll fix deployment is Vercel READY.
+- GitHub has the v24 worker code synced.
+- Production deployments READY; direct page visual verification still pending.
 
-## Production website
+## Honest limitations
 
-- GitHub main contains the automatic discovery UI and provider-health dashboard updates, plus 19 sitemap URLs.
-- A READY Vercel production deployment with `urbanbuying.com` and `www.urbanbuying.com` aliases contains the automatic engine UI changes.
-- The latest app-code deployment is READY; later docs-only deployments are queued/building.
-- Direct public HTML fetch could not be verified in this check; deployment READY state and alias assignment are verified.
-
-## Important limitations
-
-- `BRAVE_SEARCH_API_KEY` is missing. Brave is enabled and terms-reviewed in the source catalog but cannot execute until the server secret is added.
-- `OPENAI_API_KEY` is missing. AI classification/content currently use rules and templates.
-- Public web/news results are weak intent signals—not confirmed buyers or enquiries. No private contacts are scraped or invented.
-- Automatic content creation is active, but social publishing is not connected. Facebook/Instagram, WhatsApp and Google Business Profile require credentials, permissions and publishing workflow implementation.
-- Real enquiries are currently 0. No fake CRM leads were created.
-
-## Remaining core blockers
-
-1. Add `BRAVE_SEARCH_API_KEY` to Supabase Edge Function secrets for broader web-search coverage.
-2. Add `OPENAI_API_KEY` to enable GPT-6 Luna classification and automatic AI content.
-3. Implement authorized automatic publishing/lead-capture integrations and test actual enquiry delivery.
-4. Verify signup, public enquiry link, submit-to-CRM, notifications and follow-ups with an owner test session.
+- No actual CRM enquiries currently.
+- News/RSS public mentions are not verified buyer enquiries.
+- OpenAI API key is not configured; AI generation/classification uses local rules/templates.
+- Brave key is not configured; wider public-web search is unavailable.
+- Automatic social publishing and connected enquiry channels are not yet implemented/authorized (Meta, WhatsApp, Google Business Profile).
+- Do not scrape/invent personal contact details or convert unverified signals into confirmed leads.
