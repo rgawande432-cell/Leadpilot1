@@ -16,10 +16,10 @@ function classify(text:string,terms:string[],area:string,dateValue:string){
  const t=norm(text);
  const generic=new Set(["service","services","business","businesses","shop","shops","store","stores","company","companies","local","agency","agencies","pune","india","best","top","product","products"]);
  const matched=terms.filter(x=>x&&norm(x).length>=3&&!generic.has(norm(x))&&t.includes(norm(x))).slice(0,8);
- const explicit=/(looking for|searching for|need\\s+(?:(?:a|an|some)\\s+)?(?:\\w[\\w -]{2,40})|want (?:to buy|to hire|a|an)|buy(ing)?|purchase|hire|book (?:a|an)|request(?:ing)? (?:a|for)|seeking|quotation|quote (?:for|from)|price (?:for|of)|cost of|inquiry|enquir(?:y|ies)|chahiye|kharid(?:n|na|ni)|mangwana|खरीदना|खरीदनी|खरीदने|मुझे .* चाहिए|भाड़े पर|बुक करना|कोटेशन|कीमत|दाम)/i.test(t);
+ const explicit=/(looking for|searching for|need\s+(?:(?:a|an|some)\s+)?(?:\w[\w -]{2,40})|want (?:to buy|to hire|a|an)|buy(ing)?|purchase|hire|book (?:a|an)|request(?:ing)? (?:a|for)|seeking|quotation|quote (?:for|from)|price (?:for|of)|cost of|inquiry|enquir(?:y|ies)|chahiye|kharid(?:n|na|ni)|mangwana|खरीदना|खरीदनी|खरीदने|मुझे .* चाहिए|भाड़े पर|बुक करना|कोटेशन|कीमत|दाम)/i.test(t);
  const question=/(where can i (?:buy|find|get|book|hire)|where to (?:buy|find|get)|anyone (?:know|recommend)|can anyone recommend|any recommendations|recommend (?:a|an|some)|suggest (?:a|an|some)|which (?:shop|store|provider|service)|how much (?:does|is|are)|price (?:for|of)|quote for|kahan milega|kaha milega|kahan se (?:buy|kharid)|कहाँ मिलेगा|कहां मिलेगा|कहाँ खरीद|कहां खरीद|कौन (?:सा|सी)|किससे (?:खरीद|मिलेगा)|कितने (?:का|की)|कितना (?:है|पड़ेगा)|कोई (?:दुकान|सुझाव|रिकमेंड)/i.test(t);
  const nonBuyerNews=/(breaking news|disrupt|affected|rail block|train service|traffic (?:update|news)|weather (?:update|news)|election|incident|announced|announcement|report|update|launch(?:ed)?|opens?|closes?|inaugurat|festival|event|cricket|sports|accident|strike|protest|market report|industry news|case study|success story|trend(?:s)?|what is|explained|definition)/i.test(t);
- const editorial=/(top\\s*\\d+|best\\s*\\d+|list of|guide to|how to|tips for|review of|comparison|ranked|directory|agencies in|shops in|stores in|companies in|market report|industry news|case study|success story|trend(?:s)?|what is|explained|definition)/i.test(t);
+ const editorial=/(top\s*\d+|best\s*\d+|list of|guide to|how to|tips for|review of|comparison|ranked|directory|agencies in|shops in|stores in|companies in|market report|industry news|case study|success story|trend(?:s)?|what is|explained|definition)/i.test(t);
  const areaNorm=norm(area),areaMatch=!!areaNorm&&t.includes(areaNorm);
  let fresh=true;if(dateValue){const parsed=Date.parse(dateValue);if(Number.isFinite(parsed))fresh=(Date.now()-parsed)<=21*24*60*60*1000;}
  const hasBusinessMatch=matched.length>0;
@@ -34,7 +34,7 @@ function classify(text:string,terms:string[],area:string,dateValue:string){
 function buildQueries(category:string,area:string,terms:string[]){
  const main=terms.slice(0,4);const phrase=main.slice(0,2).map(t=>'"'+t+'"').join(" OR ");
  const queries=['"'+category+'" "'+area+'"','('+phrase+') "'+area+'" (looking for OR need OR recommend OR quote OR price OR hire)','('+phrase+') "'+area+'" (chahiye OR kahan OR kharid OR recommendation OR quotation)'];
- return [...new Set(queries.map(q=>q.replace(/\\s+/g," ").trim()).filter(Boolean))].slice(0,3);
+ return [...new Set(queries.map(q=>q.replace(/\s+/g," ").trim()).filter(Boolean))].slice(0,3);
 }
 async function searchGdelt(query:string){
  // Compact query syntax: avoid complex OR/group operators which often time out.
