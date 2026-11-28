@@ -195,7 +195,7 @@ a{color:var(--brand-dark)}
  .engine-halo{animation:halo-pulse 5.5s ease-in-out infinite alternate!important}
  .halo-two{animation-delay:-2.7s!important}
  .engine-orbit{animation-duration:28s!important}.orbit-two{animation-duration:36s!important}
- .engine-scan{opacity:.32!important;animation-duration:10s!important}
+ .engine-scan{opacity:.72!important;animation-duration:5.2s!important}
  .engine-system-card{animation:card-gentle 5.2s ease-in-out infinite}
  .engine-system-card:nth-child(2){animation-delay:-1.5s}.engine-system-card:nth-child(3){animation-delay:-3s}.engine-system-card:nth-child(4){animation-delay:-4.5s}
  .visual-radar:after{animation-duration:5.5s!important;opacity:.55!important}
@@ -464,7 +464,7 @@ const f=$('businessForm');
 ['name','business_type','niche','location','phone','email','website','audience','description'].forEach(k=>f.elements[k].value=biz?.[k]||'');
 f.elements.services.value=(biz?.services||[]).join(', ');
 f.elements.public_listing_enabled.checked=!!biz?.public_listing_enabled;
-f.elements.public_phone_enabled.checked=!!biz?.public_phone_enabled;
+f.elements.public_phone_enabled.checked=!!biz?.public_listing_enabled&&!!biz?.public_phone_enabled;
 f.elements.public_phone_enabled.disabled=!f.elements.public_listing_enabled.checked;
 }
 $('businessForm').elements.public_listing_enabled.onchange=()=>{
@@ -722,7 +722,7 @@ hide('dashboard');
 
 
 // Gentle auto-running motion showcase. User can pause/play; scroll does not interrupt it.
-(()=>{const buttons=[...document.querySelectorAll('[data-motion-tour]')],statuses=[...document.querySelectorAll('[data-motion-status]')],cards=[...document.querySelectorAll('.engine-system-card')];if(!buttons.length||!cards.length)return;let timer=null,index=-1;const reduced=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;function setButtons(text){buttons.forEach(b=>{b.textContent=text;b.setAttribute('aria-pressed',String(!!timer));});}function setStatus(text){statuses.forEach(s=>s.textContent=text);}function step(){index=(index+1)%cards.length;cards.forEach((c,i)=>c.classList.toggle('motion-active',i===index));cards[index].scrollIntoView({behavior:reduced?'auto':'smooth',block:'center'});setStatus('Showing: '+cards[index].querySelector('h3')?.textContent+' · '+(index+1)+' of '+cards.length);}function start(manual){if(reduced&&!manual){setStatus('Motion is reduced by your device. Tap Play to enable the preview.');return;}if(timer)return;if(reduced)document.body.classList.add('motion-override');setButtons('Ⅱ Pause motion preview');step();timer=setInterval(step,3400);}function pause(){if(timer){clearInterval(timer);timer=null;}cards.forEach(c=>c.classList.remove('motion-active'));if(reduced)document.body.classList.remove('motion-override');setButtons('▶ Play motion preview');setStatus('Motion preview paused · Tap Play to resume');}buttons.forEach(b=>b.addEventListener('click',()=>timer?pause():start(true)));if(reduced){setStatus('Motion is reduced by your device. Tap Play to enable the preview.');}else{setButtons('▶ Play motion preview');setTimeout(()=>start(false),1200);}})();
+(()=>{const buttons=[...document.querySelectorAll('[data-motion-tour]')],statuses=[...document.querySelectorAll('[data-motion-status]')],cards=[...document.querySelectorAll('.engine-system-card')];if(!buttons.length||!cards.length)return;let timer=null,index=-1;const reduced=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;function setButtons(text){buttons.forEach(b=>{b.textContent=text;b.setAttribute('aria-pressed',String(!!timer));});}function setStatus(text){statuses.forEach(s=>s.textContent=text);}function step(){index=(index+1)%cards.length;cards.forEach((c,i)=>c.classList.toggle('motion-active',i===index));cards[index].scrollIntoView({behavior:reduced?'auto':'smooth',block:'center'});setStatus('Showing: '+cards[index].querySelector('h3')?.textContent+' · '+(index+1)+' of '+cards.length);}function start(manual){if(reduced&&!manual){setStatus('Motion is reduced by your device. Tap Play to enable the preview.');return;}if(timer)return;if(reduced)document.body.classList.add('motion-override');timer=setInterval(step,3400);setButtons('Ⅱ Pause motion preview');step();}function pause(){if(timer){clearInterval(timer);timer=null;}cards.forEach(c=>c.classList.remove('motion-active'));if(reduced)document.body.classList.remove('motion-override');setButtons('▶ Play motion preview');setStatus('Motion preview paused · Tap Play to resume');}buttons.forEach(b=>b.addEventListener('click',()=>timer?pause():start(true)));if(reduced){setStatus('Motion is reduced by your device. Tap Play to enable the preview.');}else{setButtons('▶ Play motion preview');setTimeout(()=>start(false),1200);}})();
 </script>
 </body>
 </html>
