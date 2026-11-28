@@ -12,32 +12,29 @@ const parseRss=(xml:string,provider:string)=>[...xml.matchAll(/<item\b[^>]*>([\s
  const block=m[1];const field=(tag:string)=>xmlDecode((block.match(new RegExp("<"+tag+"[^>]*>([\\s\\S]*?)<\\/"+tag+">","i"))||[])[1]||"").trim();
  return {title:field("title"),url:field("link"),date:field("pubDate"),description:field("description"),domain:provider};
 }).filter(x=>x.title&&x.url);
-function classify(text:string,terms:string[],area:string){
+function classify(text:string,terms:string[],area:string,dateValue:string){
  const t=norm(text);
- const generic=new Set(["service","services","business","businesses","shop","shops","store","stores","company","companies","local","marketing","digital marketing","agency","agencies","pune","india","best","top"]);
+ const generic=new Set(["service","services","business","businesses","shop","shops","store","stores","company","companies","local","agency","agencies","pune","india","best","top","product","products"]);
  const matched=terms.filter(x=>x&&norm(x).length>=3&&!generic.has(norm(x))&&t.includes(norm(x))).slice(0,8);
- const explicit=/(looking for|need (a|an|some) (?!.*(?:news|information|update))|want (a|to buy|to hire)|buy(ing)?|purchase|hire|book (a|an)|request(ing)? (a|for)|seeking|quotation|quote (for|from)|price (for|of)|cost of|inquiry|enquir(y|ies)|chahiye|kharid(n|na|ni)|mangwana|खरीदना|खरीदनी|खरीदने|मुझे .* चाहिए|भाड़े पर|बुक करना|कोटेशन|कीमत|दाम)/i.test(t);
- const question=/(where can i (buy|find|get|book|hire)|where to (buy|find|get)|anyone (know|recommend)|can anyone recommend|any recommendations|recommend (a|an|some)|suggest (a|an|some)|which (shop|store|provider|service)|how much (does|is|are)|price (for|of)|quote for|kahan milega|kaha milega|kahan se (buy|kharid)|कहाँ मिलेगा|कहां मिलेगा|कहाँ खरीद|कहां खरीद|कौन (सा|सी)|किससे (खरीद|मिलेगा)|कितने (का|की)|कितना (है|पड़ेगा)|कोई (दुकान|सुझाव|रिकमेंड)/i.test(t);
- const nonBuyerNews=/(news|breaking|disrupt|affected|rail block|train service|traffic|weather|election|incident|announced|announcement|report|update|launch(ed)?|opens?|closes?|inaugurat|festival|event|cricket|sports|accident|strike|protest)/i.test(t);
- const editorial=/(top\s*\d+|best\s*\d+|list of|guide to|how to|tips for|review of|comparison|ranked|directory|agencies in|shops in|stores in|companies in|market report|industry news|case study|success story|trend(s)?|what is|explained|definition)/i.test(t);
+ const explicit=/(looking for|searching for|need\\s+(?:(?:a|an|some)\\s+)?(?:\\w[\\w -]{2,40})|want (?:to buy|to hire|a|an)|buy(ing)?|purchase|hire|book (?:a|an)|request(?:ing)? (?:a|for)|seeking|quotation|quote (?:for|from)|price (?:for|of)|cost of|inquiry|enquir(?:y|ies)|chahiye|kharid(?:n|na|ni)|mangwana|खरीदना|खरीदनी|खरीदने|मुझे .* चाहिए|भाड़े पर|बुक करना|कोटेशन|कीमत|दाम)/i.test(t);
+ const question=/(where can i (?:buy|find|get|book|hire)|where to (?:buy|find|get)|anyone (?:know|recommend)|can anyone recommend|any recommendations|recommend (?:a|an|some)|suggest (?:a|an|some)|which (?:shop|store|provider|service)|how much (?:does|is|are)|price (?:for|of)|quote for|kahan milega|kaha milega|kahan se (?:buy|kharid)|कहाँ मिलेगा|कहां मिलेगा|कहाँ खरीद|कहां खरीद|कौन (?:सा|सी)|किससे (?:खरीद|मिलेगा)|कितने (?:का|की)|कितना (?:है|पड़ेगा)|कोई (?:दुकान|सुझाव|रिकमेंड)/i.test(t);
+ const nonBuyerNews=/(breaking news|disrupt|affected|rail block|train service|traffic (?:update|news)|weather (?:update|news)|election|incident|announced|announcement|report|update|launch(?:ed)?|opens?|closes?|inaugurat|festival|event|cricket|sports|accident|strike|protest|market report|industry news|case study|success story|trend(?:s)?|what is|explained|definition)/i.test(t);
+ const editorial=/(top\\s*\\d+|best\\s*\\d+|list of|guide to|how to|tips for|review of|comparison|ranked|directory|agencies in|shops in|stores in|companies in|market report|industry news|case study|success story|trend(?:s)?|what is|explained|definition)/i.test(t);
  const areaNorm=norm(area),areaMatch=!!areaNorm&&t.includes(areaNorm);
- const businessTerms=matched.length>0;
- const explicitIntent=explicit&&businessTerms&&!nonBuyerNews;
- const questionIntent=question&&businessTerms&&!nonBuyerNews;
- const intent=editorial||nonBuyerNews?"research":explicitIntent?"explicit":questionIntent?"question":"research";
- let score=intent==="explicit"?62:intent==="question"?52:8;
- score+=Math.min(18,matched.length*6)+(areaMatch?10:0)+(t.length>100?5:0);
- if(editorial||nonBuyerNews)score=0;
- return {intent,score:Math.min(100,score),matched,areaMatch,editorial,nonBuyerNews,explicitIntent,questionIntent};
+ let fresh=true;if(dateValue){const parsed=Date.parse(dateValue);if(Number.isFinite(parsed))fresh=(Date.now()-parsed)<=21*24*60*60*1000;}
+ const hasBusinessMatch=matched.length>0;
+ const explicitIntent=explicit&&hasBusinessMatch&&!nonBuyerNews&&!editorial&&fresh;
+ const questionIntent=question&&hasBusinessMatch&&!nonBuyerNews&&!editorial&&fresh;
+ const intent=explicitIntent?"explicit":questionIntent?"question":"research";
+ let score=intent==="explicit"?75:intent==="question"?68:0;
+ score+=Math.min(16,matched.length*8)+(areaMatch?10:0)+(t.length>100?5:0)+(fresh?5:0);
+ if(editorial||nonBuyerNews||!fresh||!hasBusinessMatch)score=0;
+ return {intent,score,matched,areaMatch,editorial,nonBuyerNews,explicitIntent,questionIntent,fresh};
 }
 function buildQueries(category:string,area:string,terms:string[]){
- const main=terms.slice(0,3);
- const queries=[
-  '"' + category + '" "' + area + '"',
-  '(' + main.slice(0,2).map(t=>'"'+t+'"').join(" OR ") + ') "' + area + '" (looking for OR need OR recommend OR quote OR price)',
-  '(' + main.slice(0,2).map(t=>'"'+t+'"').join(" OR ") + ') "' + area + '" (chahiye OR kahan OR kharid OR recommendation)'
- ];
- return [...new Set(queries.map(q=>q.replace(/\s+/g," ").trim()).filter(Boolean))].slice(0,3);
+ const main=terms.slice(0,4);const phrase=main.slice(0,2).map(t=>'"'+t+'"').join(" OR ");
+ const queries=['"'+category+'" "'+area+'"','('+phrase+') "'+area+'" (looking for OR need OR recommend OR quote OR price OR hire)','('+phrase+') "'+area+'" (chahiye OR kahan OR kharid OR recommendation OR quotation)'];
+ return [...new Set(queries.map(q=>q.replace(/\\s+/g," ").trim()).filter(Boolean))].slice(0,3);
 }
 async function searchGdelt(query:string){
  // Compact query syntax: avoid complex OR/group operators which often time out.
@@ -61,11 +58,11 @@ async function searchBrave(query:string,key:string){
  const data=await r.json();return (data?.web?.results||[]).map((x:any)=>{try{const u=new URL(x.url);return {title:x.title||"",url:u.href,date:x.age||"",description:x.description||"",domain:u.hostname};}catch{return null;}}).filter((x:any)=>x&&x.title&&x.url);
 }
 async function aiAnalyze(items:any[],business:any,area:string){
- const key=Deno.env.get("OPENAI_API_KEY");if(!key||!items.length)return null;
+ const key=Deno.env.get("OPENAI_API_KEY"),model=Deno.env.get("OPENAI_MODEL");if(!key||!model||!items.length)return null;
  const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),8000);
  try{
   const payload=items.slice(0,12).map((x,i)=>({id:i,title:x.title,description:x.description||"",domain:x.domain||"",url:x.url}));
-  const response=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{"Authorization":"Bearer "+key,"Content-Type":"application/json"},signal:controller.signal,body:JSON.stringify({model:"gpt-6-luna",instructions:"Classify public web/news evidence for a local business lead-discovery system. Never infer or invent a person's identity, contact details, purchase, or private data. SEO listicles, rankings, guides and general news are research—not buyer intent. Public search results are not confirmed leads. Return a JSON object with items [{id,relevance_score 0-100,intent_type explicit|question|research,summary,reason}]. Score relevance to the business and area. Only use explicit/question if text genuinely expresses buying/service request, recommendation, price/quote or need. Otherwise research. Ground summaries in supplied evidence.",input:JSON.stringify({business:{name:business.name,type:business.business_type,niche:business.niche,services:business.services},area,results:payload}),max_output_tokens:900})});
+  const response=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{"Authorization":"Bearer "+key,"Content-Type":"application/json"},signal:controller.signal,body:JSON.stringify({model:"model",instructions:"Classify public web/news evidence for a local business lead-discovery system. Never infer or invent a person's identity, contact details, purchase, or private data. SEO listicles, rankings, guides and general news are research—not buyer intent. Public search results are not confirmed leads. Return a JSON object with items [{id,relevance_score 0-100,intent_type explicit|question|research,summary,reason}]. Score relevance to the business and area. Only use explicit/question if text genuinely expresses buying/service request, recommendation, price/quote or need. Otherwise research. Ground summaries in supplied evidence.",input:JSON.stringify({business:{name:business.name,type:business.business_type,niche:business.niche,services:business.services},area,results:payload}),max_output_tokens:900})});
   if(!response.ok)return null;const body=await response.json();const text=(Array.isArray(body.output)?body.output:[]).flatMap((o:any)=>Array.isArray(o.content)?o.content:[]).filter((c:any)=>c.type==="output_text").map((c:any)=>c.text||"").join("").trim();if(!text)return null;
   const parsed=JSON.parse(text);return Array.isArray(parsed.items)?parsed.items:null;
  }catch{return null;}finally{clearTimeout(timer);}
@@ -74,13 +71,13 @@ async function createDailyDraft(admin:any,biz:any,area:string,category:string,ca
  const cutoff=new Date(Date.now()-24*60*60*1000).toISOString();
  const prior=await admin.from("leadpilot_content_drafts").select("id").eq("business_id",biz.id).gte("created_at",cutoff).limit(1);
  if(prior.data?.length)return "already-created-today";
- const key=Deno.env.get("OPENAI_API_KEY");
+ const key=Deno.env.get("OPENAI_API_KEY"),model=Deno.env.get("OPENAI_MODEL");
  const context=candidates.slice(0,3).map((x:any)=>x.title).filter(Boolean).join(" | ");
  let title=category+" — local organic post",content="",mode="template";
- if(key){
+ if(key&&model){
   const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),8000);
   try{
-   const response=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{"Authorization":"Bearer "+key,"Content-Type":"application/json"},signal:controller.signal,body:JSON.stringify({model:"gpt-6-luna",instructions:"Create one helpful, non-spammy organic social post for an Indian local business. Use Hindi and simple English naturally. Never invent discounts, prices, availability, testimonials, guarantees, certifications, or claims. Include a soft CTA to submit a genuine enquiry using the business's available contact/profile. Keep under 160 words. Return only post text.",input:JSON.stringify({business:{name:biz.name,type:biz.business_type,niche:biz.niche,description:biz.description,services:biz.services,area,phone:biz.phone||""},recent_public_topics:context}),max_output_tokens:400})});
+   const response=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{"Authorization":"Bearer "+key,"Content-Type":"application/json"},signal:controller.signal,body:JSON.stringify({model:"model",instructions:"Create one helpful, non-spammy organic social post for an Indian local business. Use Hindi and simple English naturally. Never invent discounts, prices, availability, testimonials, guarantees, certifications, or claims. Include a soft CTA to submit a genuine enquiry using the business's available contact/profile. Keep under 160 words. Return only post text.",input:JSON.stringify({business:{name:biz.name,type:biz.business_type,niche:biz.niche,description:biz.description,services:biz.services,area,phone:biz.phone||""},recent_public_topics:context}),max_output_tokens:400})});
    if(response.ok){const body=await response.json();content=(Array.isArray(body.output)?body.output:[]).flatMap((o:any)=>Array.isArray(o.content)?o.content:[]).filter((c:any)=>c.type==="output_text").map((c:any)=>c.text||"").join("").trim();if(content)mode="ai";}
   }catch{}finally{clearTimeout(timer);}
  }
@@ -148,13 +145,12 @@ Deno.serve(async(req)=>{
    await saveSourceHealth(admin,biz.id,"brave_public_web_search",braveHealth,braveHealth==="not_connected"?"Brave API key missing or source review incomplete":braveHealth==="disabled"?"Brave source disabled":braveFailure?providerErrors.filter(x=>x.startsWith("Brave:")).join(" | "):"Brave search succeeded");
    let savedCount=0,explicitCount=0,questionCount=0,newCount=0;
    for(let i=0;i<candidates.length;i++){
-    const item=candidates[i],evidence=(item.title+" — "+(item.description||"")+" — "+item.domain+" — "+item.date).slice(0,2000),heur=classify(evidence,terms,area),aiItem=ai?.find((x:any)=>Number(x.id)===i);
-    const aiIntent=aiItem?.intent_type==="explicit"||aiItem?.intent_type==="question"||aiItem?.intent_type==="research"?aiItem.intent_type:heur.intent;
-    const intent=heur.editorial?"research":aiIntent;
-    const relevance=Number.isFinite(Number(aiItem?.relevance_score))?Math.max(0,Math.min(100,Number(aiItem.relevance_score))):heur.score;
-    const score=Math.round(Math.max(0,Math.min(100,relevance+(heur.areaMatch?5:0))));
+    const item=candidates[i],evidence=(item.title+" — "+(item.description||"")+" — "+item.domain+" — "+item.date).slice(0,2000),heur=classify(evidence,terms,area,item.date),aiItem=ai?.find((x:any)=>Number(x.id)===i);
+    // AI is enrichment only: it cannot upgrade research/noise into buyer intent or override local evidence.
+    const intent=heur.intent;
+    const score=Math.round(Math.max(0,Math.min(100,heur.score)));
     const matched=heur.matched;
-    if(intent==="research"||score<50||matched.length===0)continue;
+    if((intent!=="explicit"&&intent!=="question")||score<70||matched.length===0||!heur.fresh)continue;
     const summary=String(aiItem?.summary||item.title||"Public web intent signal").slice(0,500);
     const reason=String(aiItem?.reason||("Matched terms: "+matched.join(", "))).slice(0,400);
     const dedupe=norm(item.url+"|"+item.title).slice(0,500);
@@ -165,8 +161,8 @@ Deno.serve(async(req)=>{
     if(intent==="explicit")explicitCount++;else if(intent==="question")questionCount++;
    }
    const now=new Date().toISOString();
-   const note="Scheduled discovery completed using free RSS search and enhanced local intent rules. Public signals are unverified and not confirmed buyers.";
-   const report={business_name:biz.name,area,niche:category,queries,provider:(braveApproved?"Brave Search API + ":"")+"Google News RSS + Bing News RSS",candidate_articles:candidates.length,pending_search_candidates:savedCount,new_candidates:newCount,explicit_intent_candidates:explicitCount,question_candidates:questionCount,ai_classification:ai?"GPT-6 Luna":"enhanced_free_rules_v3",automatic_content_draft:contentDraftStatus,external_search_status:approved?"connected":"source_disabled",source_health:{free_news:freeSourceStatus,gdelt:"disabled_timeout",brave:braveHealth,rss_success:rssSuccess,rss_failure:rssFailure,brave_success:braveSuccess,brave_failure:braveFailure},brave_search_status:braveApproved?"connected":braveSource?.enabled?"enabled_but_key_missing_or_terms_unreviewed":"not_enabled",external_search_errors:providerErrors.slice(0,8),note};
+   const note="Scheduled discovery completed using free RSS search and enhanced local intent rules v4. AI is enrichment only and cannot promote research/noise into buyer intent. Public signals are unverified and not confirmed buyers.";
+   const report={business_name:biz.name,area,niche:category,queries,provider:(braveApproved?"Brave Search API + ":"")+"Google News RSS + Bing News RSS",candidate_articles:candidates.length,pending_search_candidates:savedCount,new_candidates:newCount,explicit_intent_candidates:explicitCount,question_candidates:questionCount,ai_classification:ai?"optional_llm_enrichment":"enhanced_free_rules_v4",automatic_content_draft:contentDraftStatus,external_search_status:approved?"connected":"source_disabled",source_health:{free_news:freeSourceStatus,gdelt:"disabled_timeout",brave:braveHealth,rss_success:rssSuccess,rss_failure:rssFailure,brave_success:braveSuccess,brave_failure:braveFailure},brave_search_status:braveApproved?"connected":braveSource?.enabled?"enabled_but_key_missing_or_terms_unreviewed":"not_enabled",external_search_errors:providerErrors.slice(0,8),note};
    await admin.from("ai_discovery_runs").update({status:"completed",completed_at:now,signals_found:newCount,leads_created:0,source_name:"Automatic multi-source discovery",error_summary:note}).eq("id",runId);
    await admin.from("ai_discovery_jobs").update({status:"completed",completed_at:now,next_retry_at:null,error_message:null,metadata:{...(job.metadata||{}),report}}).eq("id",job.id);
    reports.push({job_id:job.id,run_id:runId,report});
@@ -177,5 +173,5 @@ Deno.serve(async(req)=>{
    reports.push({job_id:job.id,error:message});
   }
  }));
- return json({success:true,claimed:jobs.length,processed:reports,worker_version:"automatic-discovery-v2"});
+ return json({success:true,claimed:jobs.length,processed:reports,worker_version:"automatic-discovery-v4"});
 });
