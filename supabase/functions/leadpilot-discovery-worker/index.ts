@@ -79,6 +79,14 @@ async function createDailyDraft(admin:any,biz:any,area:string,category:string,ca
  if(saved.error)return "draft-save-error: "+saved.error.message;
  return mode==="ai"?"ai-draft-created":"template-draft-created";
 }
+async function saveSourceHealth(admin:any,businessId:string,sourceKey:string,status:"healthy"|"degraded"|"failed"|"not_connected"|"disabled",notes:string){
+ try{
+  const old=await admin.from("ai_discovery_source_health").select("consecutive_failures,last_success_at").eq("business_id",businessId).eq("source_key",sourceKey).maybeSingle();
+  const successful=status==="healthy"||status==="degraded";
+  const payload={business_id:businessId,source_key:sourceKey,last_checked_at:new Date().toISOString(),last_success_at:successful?new Date().toISOString():old.data?.last_success_at||null,consecutive_failures:status==="failed"?(Number(old.data?.consecutive_failures||0)+1):0,status,notes:notes.slice(0,1000)};
+  await admin.from("ai_discovery_source_health").upsert(payload,{onConflict:"business_id,source_key"});
+ }catch{}
+}
 Deno.serve(async(req)=>{
  if(req.method==="OPTIONS")return new Response("ok",{headers:cors});
  if(req.method!=="POST")return json({error:"POST required"},405);
@@ -110,20 +118,24 @@ Deno.serve(async(req)=>{
    const rawTerms=[biz.niche,biz.business_type,...(biz.services||[]),...(cfg.keywords||[])].filter(Boolean).map((t:string)=>String(t).trim().toLowerCase()).filter((t:string)=>t.length>=3);
    const terms=[...new Set(rawTerms)];
    const queries=buildQueries(category,area,terms.length?terms:[category]);
-   let all:any[]=[],providerErrors:string[]=[];
+   let all:any[]=[],providerErrors:string[]=[],gdeltSuccess=0,gdeltFailure=0,rssSuccess=0,rssFailure=0,braveSuccess=0,braveFailure=0;
    if(approved){
     const gdelt=await Promise.allSettled(queries.slice(0,2).map(q=>searchGdelt(q)));
-    for(const result of gdelt){if(result.status==="fulfilled")all.push(...result.value);else providerErrors.push(String(result.reason?.message||result.reason));}
+    for(const result of gdelt){if(result.status==="fulfilled"){gdeltSuccess++;all.push(...result.value);}else{gdeltFailure++;providerErrors.push("GDELT: "+String(result.reason?.message||result.reason));}}
     const rssTasks=queries.flatMap(q=>[searchRss(q,"Google News RSS"),searchRss(q,"Bing News RSS")]);
-    if(braveApproved){try{all.push(...await searchBrave(queries[0],braveKey));}catch(e){providerErrors.push(String(e instanceof Error?e.message:e));}}
+    if(braveApproved){try{all.push(...await searchBrave(queries[0],braveKey));braveSuccess++;}catch(e){braveFailure++;providerErrors.push("Brave: "+String(e instanceof Error?e.message:e));}}
     const rss=await Promise.allSettled(rssTasks);
-    for(const result of rss){if(result.status==="fulfilled")all.push(...result.value);else providerErrors.push(String(result.reason?.message||result.reason));}
+    for(const result of rss){if(result.status==="fulfilled"){rssSuccess++;all.push(...result.value);}else{rssFailure++;providerErrors.push("RSS: "+String(result.reason?.message||result.reason));}}
    }
    const unique=new Map<string,any>();
    for(const item of all){try{const u=new URL(item.url);if(!["http:","https:"].includes(u.protocol))continue;const key=u.href;const prev=unique.get(key);if(!prev||String(item.description||"").length>String(prev.description||"").length)unique.set(key,{...item,url:key});}catch{}}
    const candidates=[...unique.values()].slice(0,60);
    const ai=approved?await aiAnalyze(candidates,biz,area):null;
    const contentDraftStatus=await createDailyDraft(admin,biz,area,category,candidates);
+   const freeSourceStatus=!gdeltApproved?"disabled":(gdeltSuccess+rssSuccess>0?(gdeltFailure+rssFailure>0?"degraded":"healthy"):"failed");
+   await saveSourceHealth(admin,biz.id,"gdelt_free_news_search",freeSourceStatus,"GDELT "+gdeltSuccess+"/"+(gdeltSuccess+gdeltFailure)+" successful; RSS "+rssSuccess+"/"+(rssSuccess+rssFailure)+" successful; "+providerErrors.slice(0,5).join(" | "));
+   const braveHealth=!braveSource?.enabled?"disabled":!braveSource?.terms_reviewed||!braveKey?"not_connected":braveSuccess?"healthy":braveFailure?"failed":"not_connected";
+   await saveSourceHealth(admin,biz.id,"brave_public_web_search",braveHealth,braveHealth==="not_connected"?"Brave API key missing or source review incomplete":braveHealth==="disabled"?"Brave source disabled":braveFailure?providerErrors.filter(x=>x.startsWith("Brave:")).join(" | "):"Brave search succeeded");
    let savedCount=0,explicitCount=0,questionCount=0,newCount=0;
    for(let i=0;i<candidates.length;i++){
     const item=candidates[i],evidence=(item.title+" — "+(item.description||"")+" — "+item.domain+" — "+item.date).slice(0,2000),heur=classify(evidence,terms,area),aiItem=ai?.find((x:any)=>Number(x.id)===i);
@@ -144,7 +156,7 @@ Deno.serve(async(req)=>{
    }
    const now=new Date().toISOString();
    const note=approved?"Scheduled discovery completed. Public results are unverified intent signals, not confirmed buyer enquiries. AI classifier "+(ai?"used":"not available; rules-based scoring used")+".":"No approved external source is enabled; no leads fabricated.";
-   const report={business_name:biz.name,area,niche:category,queries,provider:(braveApproved?"Brave Search API + ":"")+"GDELT + Google News RSS + Bing News RSS",candidate_articles:candidates.length,pending_search_candidates:savedCount,new_candidates:newCount,explicit_intent_candidates:explicitCount,question_candidates:questionCount,ai_classification:ai?"GPT-6 Luna":"fallback_rules",automatic_content_draft:contentDraftStatus,external_search_status:approved?"connected":"source_disabled",brave_search_status:braveApproved?"connected":braveSource?.enabled?"enabled_but_key_missing_or_terms_unreviewed":"not_enabled",external_search_errors:providerErrors.slice(0,8),note};
+   const report={business_name:biz.name,area,niche:category,queries,provider:(braveApproved?"Brave Search API + ":"")+"GDELT + Google News RSS + Bing News RSS",candidate_articles:candidates.length,pending_search_candidates:savedCount,new_candidates:newCount,explicit_intent_candidates:explicitCount,question_candidates:questionCount,ai_classification:ai?"GPT-6 Luna":"fallback_rules",automatic_content_draft:contentDraftStatus,external_search_status:approved?"connected":"source_disabled",source_health:{free_news:freeSourceStatus,brave:braveHealth,gdelt_success:gdeltSuccess,gdelt_failure:gdeltFailure,rss_success:rssSuccess,rss_failure:rssFailure,brave_success:braveSuccess,brave_failure:braveFailure},brave_search_status:braveApproved?"connected":braveSource?.enabled?"enabled_but_key_missing_or_terms_unreviewed":"not_enabled",external_search_errors:providerErrors.slice(0,8),note};
    await admin.from("ai_discovery_runs").update({status:"completed",completed_at:now,signals_found:newCount,leads_created:0,source_name:"Automatic multi-source discovery",error_summary:note}).eq("id",runId);
    await admin.from("ai_discovery_jobs").update({status:"completed",completed_at:now,next_retry_at:null,error_message:null,metadata:{...(job.metadata||{}),report}}).eq("id",job.id);
    reports.push({job_id:job.id,run_id:runId,report});
