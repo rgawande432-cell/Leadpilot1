@@ -94,9 +94,9 @@ Deno.serve(async(req)=>{
  const braveKey=Deno.env.get("BRAVE_SEARCH_API_KEY")||"";
  const braveApproved=!!braveSource?.enabled&&!!braveSource?.terms_reviewed&&!!braveKey;
  const approved=gdeltApproved||braveApproved;
- const claim=await admin.rpc("claim_leadpilot_discovery_jobs",{p_limit:2});if(claim.error)return json({error:claim.error.message},500);
+ const claim=await admin.rpc("claim_leadpilot_discovery_jobs",{p_limit:3});if(claim.error)return json({error:claim.error.message},500);
  const jobs=claim.data||[],reports:any[]=[];
- for(const job of jobs){
+ await Promise.all(jobs.map(async(job)=>{
   const started=new Date().toISOString();let runId:string|null=null;
   try{
    const [{data:biz,error:bErr},{data:cfg,error:cErr}]=await Promise.all([
@@ -154,6 +154,6 @@ Deno.serve(async(req)=>{
    await admin.from("ai_discovery_jobs").update({status:"failed",completed_at:now,next_retry_at:new Date(Date.now()+Math.min(60,10*(job.attempts||1))*60000).toISOString(),error_message:message}).eq("id",job.id);
    reports.push({job_id:job.id,error:message});
   }
- }
+ }));
  return json({success:true,claimed:jobs.length,processed:reports,worker_version:"automatic-discovery-v2"});
 });
