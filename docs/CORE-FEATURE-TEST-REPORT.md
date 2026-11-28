@@ -79,3 +79,11 @@ Sample: Grabclever Digital Marketing, Pune; website omitted. Existing owner-scop
 ## Still not fully E2E verified
 
 Owner-authenticated UI actions (save profile, content-generation invoke, public-link enable, public enquiry submission, CRM screen, notification UI, follow-up planner and analytics) require a logged-in owner test session. Live external RSS results were exercised through the scheduled scan, but the result contained no candidate signals for this sample. A scan with zero candidates is a valid result, not a lead-generation guarantee.
+
+
+## Domain connection check — 28 November 2026
+
+- Vercel project-domain check for `urbanbuying.com`: `verified=true`; domain is attached to `leadpilot1`.
+- Vercel DNS config check: Cloudflare nameservers `kevin.ns.cloudflare.com` and `harleigh.ns.cloudflare.com`; `misconfigured=false`; no DNS conflicts reported.
+- Owner supplied Cloudflare records: apex A records `64.29.17.1` and `216.198.79.1`, and `www` CNAME `d364379b744df0da.vercel-dns-017.com`; all three are currently Proxied (orange cloud).
+- Domain attachment and DNS config are confirmed at Vercel. Direct HTTPS page inspection is not available through the web inspection channel, so homepage rendering and SSL browser confirmation remain pending. Do not claim the site is fully smoke-tested until a browser check succeeds.
