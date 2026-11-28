@@ -13,14 +13,20 @@ const parseRss=(xml:string,provider:string)=>[...xml.matchAll(/<item\b[^>]*>([\s
  return {title:field("title"),url:field("link"),date:field("pubDate"),description:field("description"),domain:provider};
 }).filter(x=>x.title&&x.url);
 function classify(text:string,terms:string[],area:string){
- const t=norm(text);const matched=terms.filter(x=>x&&t.includes(x)).slice(0,8);
- const explicit=/(looking for|need a|need an|need to|want to buy|want a|buying|purchase|hire|quote|quotation|price for|available for|request for|seeking|chahiye|kharidna|kharid|mangwana|mujhe.*(chahiye|buy)|खरीद|चाहिए)/i.test(t);
- const question=/(anyone know where|where can i (buy|find|get|book|hire)|where to (buy|find|get)|can anyone recommend|any recommendations for|looking for (a|an|some)|how much (does|is|are)|price (for|of)|quote for|kahan milega|कहाँ मिलेगा|कहाँ खरीद|किससे खरीद|recommend.*(shop|store|service|provider))/i.test(t);
- const editorial=/(top\s*\d+|best\s*\d+|list of|guide to|how to|tips for|review of|comparison|ranked|directory|agencies in|shops in|stores in|companies in)/i.test(t);
- const areaMatch=area&&t.includes(norm(area));
- const intent=editorial?"research":explicit?"explicit":question?"question":"research";
- const score=Math.min(100,(intent==="explicit"?55:intent==="question"?45:10)+Math.min(24,matched.length*6)+(areaMatch?10:0)+(t.length>80?4:0));
- return {intent,score,matched,areaMatch,editorial};
+ const t=norm(text);
+ const matched=terms.filter(x=>x&&norm(x).length>=2&&t.includes(norm(x))).slice(0,8);
+ const explicit=/(looking for|need (a|an|some|to)|want (a|to buy|to hire)|buying|purchase|purchas(e|ing)|hire|book (a|an)|request(ing)? (a|for)|seeking|quotation|quote (for|from)|price (for|of)|cost of|available (for|near)|inquiry|enquir(y|ies)|chahiye|kharid(n|na|ni)|mangwana|mujhe .* chahiye|खरीदना|खरीदनी|खरीदने|चाहिए|मुझे .* चाहिए|भाड़े पर|बुक करना|कोटेशन|कीमत|दाम|प्राइस)/i.test(t);
+ const question=/(where can i (buy|find|get|book|hire)|where to (buy|find|get)|anyone (know|recommend)|can anyone recommend|any recommendations|recommend (a|an|some)|suggest (a|an|some)|which (shop|store|provider|service)|how much (does|is|are)|price (for|of)|quote for|kahan milega|kaha milega|kahan se (buy|kharid)|कहाँ मिलेगा|कहां मिलेगा|कहाँ खरीद|कहां खरीद|कौन (सा|सी)|किससे (खरीद|मिलेगा)|कितने (का|की)|कितना (है|पड़ेगा)|कोई (दुकान|सुझाव|रिकमेंड)|recommendation)/i.test(t);
+ const editorial=/(top\s*\d+|best\s*\d+|list of|guide to|how to|tips for|review of|comparison|ranked|directory|agencies in|shops in|stores in|companies in|market report|industry news|case study|success story|trend(s)?|what is|explained|definition)/i.test(t);
+ const areaNorm=norm(area),areaMatch=!!areaNorm&&t.includes(areaNorm);
+ const businessTerms=matched.length>0;
+ const explicitIntent=explicit&&(businessTerms||areaMatch);
+ const questionIntent=question&&(businessTerms||areaMatch);
+ const intent=editorial?"research":explicitIntent?"explicit":questionIntent?"question":"research";
+ let score=intent==="explicit"?62:intent==="question"?52:8;
+ score+=Math.min(18,matched.length*6)+(areaMatch?10:0)+(t.length>100?5:0);
+ if(editorial)score=0;
+ return {intent,score:Math.min(100,score),matched,areaMatch,editorial,explicitIntent,questionIntent};
 }
 function buildQueries(category:string,area:string,terms:string[]){
  const main=terms.slice(0,3);
@@ -32,8 +38,10 @@ function buildQueries(category:string,area:string,terms:string[]){
  return [...new Set(queries.map(q=>q.replace(/\s+/g," ").trim()).filter(Boolean))].slice(0,3);
 }
 async function searchGdelt(query:string){
- const u=new URL("https://api.gdeltproject.org/api/v2/doc/doc");u.searchParams.set("query",query);u.searchParams.set("mode","ArtList");u.searchParams.set("format","json");u.searchParams.set("maxrecords","15");u.searchParams.set("timespan","7d");u.searchParams.set("sort","DateDesc");
- const r=await timeoutFetch(u,{"Accept":"application/json"});if(!r.ok)throw new Error("GDELT HTTP "+r.status);
+ // Compact query syntax: avoid complex OR/group operators which often time out.
+ const compact=query.replace(/[()]/g," ").replace(/\\bOR\\b/gi," ").replace(/\\s+/g," ").trim().slice(0,180);
+ const u=new URL("https://api.gdeltproject.org/api/v2/doc/doc");u.searchParams.set("query",compact);u.searchParams.set("mode","ArtList");u.searchParams.set("format","json");u.searchParams.set("maxrecords","8");u.searchParams.set("timespan","3d");u.searchParams.set("sort","DateDesc");
+ const r=await timeoutFetch(u,{"Accept":"application/json"},10000);if(!r.ok)throw new Error("GDELT HTTP "+r.status);
  const raw=await r.text();let data:any;try{data=JSON.parse(raw);}catch{throw new Error("GDELT response was not JSON");}
  if(!Array.isArray(data?.articles))throw new Error("GDELT returned no article list");
  return data.articles.map((a:any)=>({title:a.title||"",url:a.url||"",date:a.seendate||"",description:a.description||"",domain:a.domain||"GDELT"})).filter((a:any)=>a.title&&a.url);
@@ -120,7 +128,7 @@ Deno.serve(async(req)=>{
    const queries=buildQueries(category,area,terms.length?terms:[category]);
    let all:any[]=[],providerErrors:string[]=[],gdeltSuccess=0,gdeltFailure=0,rssSuccess=0,rssFailure=0,braveSuccess=0,braveFailure=0;
    if(approved){
-    const gdelt=await Promise.allSettled(queries.slice(0,2).map(q=>searchGdelt(q)));
+    const gdeltQueries=[category+" "+area,terms.slice(0,2).join(" ")+" "+area].filter(x=>x.trim().length>2);const gdelt=await Promise.allSettled(gdeltQueries.slice(0,2).map(q=>searchGdelt(q)));
     for(const result of gdelt){if(result.status==="fulfilled"){gdeltSuccess++;all.push(...result.value);}else{gdeltFailure++;providerErrors.push("GDELT: "+String(result.reason?.message||result.reason));}}
     const rssTasks=queries.flatMap(q=>[searchRss(q,"Google News RSS"),searchRss(q,"Bing News RSS")]);
     if(braveApproved){try{all.push(...await searchBrave(queries[0],braveKey));braveSuccess++;}catch(e){braveFailure++;providerErrors.push("Brave: "+String(e instanceof Error?e.message:e));}}
@@ -156,7 +164,7 @@ Deno.serve(async(req)=>{
    }
    const now=new Date().toISOString();
    const note=approved?"Scheduled discovery completed. Public results are unverified intent signals, not confirmed buyer enquiries. AI classifier "+(ai?"used":"not available; rules-based scoring used")+".":"No approved external source is enabled; no leads fabricated.";
-   const report={business_name:biz.name,area,niche:category,queries,provider:(braveApproved?"Brave Search API + ":"")+"GDELT + Google News RSS + Bing News RSS",candidate_articles:candidates.length,pending_search_candidates:savedCount,new_candidates:newCount,explicit_intent_candidates:explicitCount,question_candidates:questionCount,ai_classification:ai?"GPT-6 Luna":"fallback_rules",automatic_content_draft:contentDraftStatus,external_search_status:approved?"connected":"source_disabled",source_health:{free_news:freeSourceStatus,brave:braveHealth,gdelt_success:gdeltSuccess,gdelt_failure:gdeltFailure,rss_success:rssSuccess,rss_failure:rssFailure,brave_success:braveSuccess,brave_failure:braveFailure},brave_search_status:braveApproved?"connected":braveSource?.enabled?"enabled_but_key_missing_or_terms_unreviewed":"not_enabled",external_search_errors:providerErrors.slice(0,8),note};
+   const report={business_name:biz.name,area,niche:category,queries,provider:(braveApproved?"Brave Search API + ":"")+"GDELT + Google News RSS + Bing News RSS",candidate_articles:candidates.length,pending_search_candidates:savedCount,new_candidates:newCount,explicit_intent_candidates:explicitCount,question_candidates:questionCount,ai_classification:ai?"GPT-6 Luna":"enhanced_free_rules_v2",automatic_content_draft:contentDraftStatus,external_search_status:approved?"connected":"source_disabled",source_health:{free_news:freeSourceStatus,brave:braveHealth,gdelt_success:gdeltSuccess,gdelt_failure:gdeltFailure,rss_success:rssSuccess,rss_failure:rssFailure,brave_success:braveSuccess,brave_failure:braveFailure},brave_search_status:braveApproved?"connected":braveSource?.enabled?"enabled_but_key_missing_or_terms_unreviewed":"not_enabled",external_search_errors:providerErrors.slice(0,8),note};
    await admin.from("ai_discovery_runs").update({status:"completed",completed_at:now,signals_found:newCount,leads_created:0,source_name:"Automatic multi-source discovery",error_summary:note}).eq("id",runId);
    await admin.from("ai_discovery_jobs").update({status:"completed",completed_at:now,next_retry_at:null,error_message:null,metadata:{...(job.metadata||{}),report}}).eq("id",job.id);
    reports.push({job_id:job.id,run_id:runId,report});
