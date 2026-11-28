@@ -186,29 +186,31 @@ a{color:var(--brand-dark)}
 /* Motion showcase preview: animated system cards and user-controlled tour */
 .motion-tour-btn{margin-top:10px;box-shadow:0 8px 24px rgba(216,90,11,.22)}.motion-tour-status{display:block;margin-top:8px;color:#98613a;font-size:12px}.engine-system-card.motion-active{box-shadow:0 0 0 2px rgba(216,90,11,.32),0 16px 36px rgba(168,61,0,.14);transform:translateY(-4px)}.engine-system-card.motion-active .system-visual{animation:visual-breathe 1.5s ease-in-out infinite alternate}.visual-discovery .visual-radar:after{animation-duration:3.8s}.visual-content .creative-stack{animation:stack-float 4.2s ease-in-out infinite}.visual-leads .lead-cubes{animation:cubes-float 5s ease-in-out infinite}.visual-growth .growth-bars i{animation:bar-glow 2s ease-in-out infinite alternate}.visual-growth .growth-bars i:nth-child(2){animation-delay:.2s}.visual-growth .growth-bars i:nth-child(3){animation-delay:.4s}.visual-growth .growth-bars i:nth-child(4){animation-delay:.6s}.visual-growth .growth-bars i:nth-child(5){animation-delay:.8s}@keyframes visual-breathe{from{filter:brightness(1)}to{filter:brightness(1.28)}}@keyframes stack-float{0%,100%{transform:rotateY(-18deg) rotateX(8deg) translateY(0)}50%{transform:rotateY(-12deg) rotateX(6deg) translateY(-8px)}}@keyframes cubes-float{0%,100%{transform:rotateX(56deg) rotateZ(35deg) translateY(0)}50%{transform:rotateX(56deg) rotateZ(39deg) translateY(-7px)}}@keyframes bar-glow{from{filter:brightness(.9)}to{filter:brightness(1.35);box-shadow:0 0 18px rgba(255,143,47,.5)}}@media(prefers-reduced-motion:reduce){.visual-content .creative-stack,.visual-leads .lead-cubes,.visual-growth .growth-bars i,.engine-system-card.motion-active .system-visual{animation:none!important}.engine-system-card.motion-active{transform:none}}
 
-/* Subtle professional motion polish — preview branch only */
-@media (min-width: 1100px) and (prefers-reduced-motion: no-preference){
- body:before,body:after{content:"";position:fixed;top:18vh;bottom:18vh;width:2px;pointer-events:none;z-index:0;background:linear-gradient(transparent,rgba(216,90,11,.11),rgba(255,179,107,.22),rgba(216,90,11,.11),transparent);opacity:.55;animation:side-rail-breathe 9s ease-in-out infinite}
- body:before{left:10px}body:after{right:10px;animation-delay:-4.5s}
- .wrap{position:relative;z-index:1}
+/* Visible but restrained ambient motion: desktop and mobile */
+@media(prefers-reduced-motion:no-preference){
+ body:before,body:after{content:"";position:fixed;top:12vh;bottom:12vh;width:7px;pointer-events:none;z-index:10;border-radius:9px;background:linear-gradient(180,transparent,rgba(216,90,11,.20),rgba(255,179,107,.42),rgba(216,90,11,.20),transparent);opacity:.75;filter:blur(2px);animation:side-glow 6s ease-in-out infinite}
+ body:before{left:0}body:after{right:0;animation-delay:-3s}
+ .engine-module{animation:module-float 5.8s ease-in-out infinite!important;transition:box-shadow .5s ease,filter .5s ease}
+ .module-content{animation-delay:-1.4s!important}.module-crm{animation-delay:-2.8s!important}.module-growth{animation-delay:-4.2s!important}
+ .engine-halo{animation:halo-pulse 5.5s ease-in-out infinite alternate!important}
+ .halo-two{animation-delay:-2.7s!important}
+ .engine-orbit{animation-duration:28s!important}.orbit-two{animation-duration:36s!important}
+ .engine-scan{opacity:.32!important;animation-duration:10s!important}
+ .engine-system-card{animation:card-gentle 6s ease-in-out infinite}
+ .engine-system-card:nth-child(2){animation-delay:-1.5s}.engine-system-card:nth-child(3){animation-delay:-3s}.engine-system-card:nth-child(4){animation-delay:-4.5s}
+ .visual-radar:after{animation-duration:5.5s!important;opacity:.55!important}
+ .visual-content .creative-stack{animation:stack-float 5.5s ease-in-out infinite!important}
+ .visual-leads .lead-cubes{animation:cubes-float 6s ease-in-out infinite!important}
+ .visual-growth .growth-bars i{animation:bar-glow 3.5s ease-in-out infinite alternate!important}
+ .engine-system-card.motion-active{box-shadow:0 0 0 1px rgba(216,90,11,.22),0 12px 26px rgba(168,61,0,.09)!important;transform:translateY(-3px)!important}
+ .engine-system-card.motion-active .system-visual{animation:visual-breathe 2.5s ease-in-out infinite alternate!important}
 }
-@keyframes side-rail-breathe{0%,100%{opacity:.22;transform:scaleY(.94)}50%{opacity:.55;transform:scaleY(1)}}
-.engine-module{animation:module-drift 8s ease-in-out infinite;box-shadow:0 8px 22px rgba(0,0,0,.2)}
-.module-content{animation-delay:-2s}.module-crm{animation-delay:-4s}.module-growth{animation-delay:-6s}
-@keyframes module-drift{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
-.engine-halo{animation:halo-soft 12s ease-in-out infinite alternate;filter:blur(16px)}
-@keyframes halo-soft{from{opacity:.34;transform:scale(.96)}to{opacity:.52;transform:scale(1.04)}}
-.engine-orbit{animation-duration:38s!important;opacity:.64}.orbit-two{animation-duration:48s!important}
-.engine-scan{opacity:.22!important;animation-duration:15s!important;box-shadow:0 0 9px rgba(255,139,40,.35)!important}
-.visual-radar:after{animation-duration:8s!important;opacity:.42}
-.visual-content .creative-stack{animation-duration:7s!important}
-.visual-leads .lead-cubes{animation-duration:8s!important}
-.visual-growth .growth-bars i{animation-duration:5s!important}
-.engine-system-card.motion-active{box-shadow:0 0 0 1px rgba(216,90,11,.15),0 9px 22px rgba(168,61,0,.07)!important;transform:translateY(-2px)!important}
-.engine-system-card.motion-active .system-visual{animation:visual-breathe 3s ease-in-out infinite alternate!important}
-@keyframes visual-breathe{from{filter:brightness(1)}to{filter:brightness(1.07)}}
-.motion-tour-btn{box-shadow:0 4px 14px rgba(216,90,11,.10)!important}
-@media(prefers-reduced-motion:reduce){body:before,body:after,.engine-module,.engine-halo,.engine-orbit,.engine-scan,.visual-radar:after,.visual-content .creative-stack,.visual-leads .lead-cubes,.visual-growth .growth-bars i{animation:none!important}.engine-system-card.motion-active{transform:none!important}}
+@keyframes side-glow{0%,100%{opacity:.25;transform:scaleY(.94)}50%{opacity:.85;transform:scaleY(1)}}
+@keyframes module-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes halo-pulse{from{opacity:.32;transform:scale(.96)}to{opacity:.72;transform:scale(1.05)}}
+@keyframes card-gentle{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+@keyframes visual-breathe{from{filter:brightness(1)}to{filter:brightness(1.10)}}
+@media(prefers-reduced-motion:reduce){body:before,body:after,.engine-module,.engine-halo,.engine-orbit,.engine-scan,.engine-system-card,.visual-radar:after,.visual-content .creative-stack,.visual-leads .lead-cubes,.visual-growth .growth-bars i{animation:none!important}}
 </style>
 </head>
 <body>
