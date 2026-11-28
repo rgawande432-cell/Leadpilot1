@@ -16,7 +16,7 @@ function classify(text:string,terms:string[],area:string){
  const t=norm(text);const matched=terms.filter(x=>x&&t.includes(x)).slice(0,8);
  const explicit=/(looking for|need a|need an|need to|want to buy|want a|buying|purchase|hire|quote|quotation|price for|available for|request for|seeking|chahiye|kharidna|kharid|mangwana|mujhe.*(chahiye|buy)|खरीद|चाहिए)/i.test(t);
  const question=/(anyone know where|where can i (buy|find|get|book|hire)|where to (buy|find|get)|can anyone recommend|any recommendations for|looking for (a|an|some)|how much (does|is|are)|price (for|of)|quote for|kahan milega|कहाँ मिलेगा|कहाँ खरीद|किससे खरीद|recommend.*(shop|store|service|provider))/i.test(t);
- const editorial=/(top\\s*\\d+|best\\s*\\d+|list of|guide to|how to|tips for|review of|comparison|ranked|directory|agencies in|shops in|stores in|companies in)/i.test(t);
+ const editorial=/(top\s*\d+|best\s*\d+|list of|guide to|how to|tips for|review of|comparison|ranked|directory|agencies in|shops in|stores in|companies in)/i.test(t);
  const areaMatch=area&&t.includes(norm(area));
  const intent=editorial?"research":explicit?"explicit":question?"question":"research";
  const score=Math.min(100,(intent==="explicit"?55:intent==="question"?45:10)+Math.min(24,matched.length*6)+(areaMatch?10:0)+(t.length>80?4:0));
