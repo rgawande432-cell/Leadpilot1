@@ -187,7 +187,7 @@ Deno.serve(async (req) => {
           existing_real_enquiries: leadCount || 0,
           verified_intent_signals: verifiedCount || 0,
           pending_search_candidates: savedCount,
-          available_source_types: ["GDELT Project / Google News RSS"],
+          available_source_types: ["GDELT Project / Google News RSS / Bing News RSS"],
           external_search_status: "connected",
           external_search_error: "",
           provider,
