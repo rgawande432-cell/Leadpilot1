@@ -15,11 +15,12 @@ const parseRss=(xml:string,provider:string)=>[...xml.matchAll(/<item\b[^>]*>([\s
 function classify(text:string,terms:string[],area:string){
  const t=norm(text);const matched=terms.filter(x=>x&&t.includes(x)).slice(0,8);
  const explicit=/(looking for|need a|need an|need to|want to buy|want a|buying|purchase|hire|quote|quotation|price for|available for|request for|seeking|chahiye|kharidna|kharid|mangwana|mujhe.*(chahiye|buy)|खरीद|चाहिए)/i.test(t);
- const question=/(which|where|recommend|suggest|anyone know|how much|best|options|can anyone|who provides|kahan milega|कहाँ|कौन|किससे|recommendation)/i.test(t);
+ const question=/(anyone know where|where can i (buy|find|get|book|hire)|where to (buy|find|get)|can anyone recommend|any recommendations for|looking for (a|an|some)|how much (does|is|are)|price (for|of)|quote for|kahan milega|कहाँ मिलेगा|कहाँ खरीद|किससे खरीद|recommend.*(shop|store|service|provider))/i.test(t);
+ const editorial=/(top\\s*\\d+|best\\s*\\d+|list of|guide to|how to|tips for|review of|comparison|ranked|directory|agencies in|shops in|stores in|companies in)/i.test(t);
  const areaMatch=area&&t.includes(norm(area));
- const intent=explicit?"explicit":question?"question":"research";
- const score=Math.min(100,(explicit?42:question?30:10)+Math.min(28,matched.length*7)+(areaMatch?12:0)+(t.length>80?5:0));
- return {intent,score,matched,areaMatch};
+ const intent=editorial?"research":explicit?"explicit":question?"question":"research";
+ const score=Math.min(100,(intent==="explicit"?55:intent==="question"?45:10)+Math.min(24,matched.length*6)+(areaMatch?10:0)+(t.length>80?4:0));
+ return {intent,score,matched,areaMatch,editorial};
 }
 function buildQueries(category:string,area:string,terms:string[]){
  const main=terms.slice(0,3);
@@ -54,7 +55,7 @@ async function aiAnalyze(items:any[],business:any,area:string){
  const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),8000);
  try{
   const payload=items.slice(0,12).map((x,i)=>({id:i,title:x.title,description:x.description||"",domain:x.domain||"",url:x.url}));
-  const response=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{"Authorization":"Bearer "+key,"Content-Type":"application/json"},signal:controller.signal,body:JSON.stringify({model:"gpt-6-luna",instructions:"Classify public web/news evidence for a local business lead-discovery system. Never infer or invent a person's identity, contact details, purchase, or private data. Public search results are not confirmed leads. Return a JSON object with items [{id,relevance_score 0-100,intent_type explicit|question|research,summary,reason}]. Score relevance to the business and area. Only use explicit/question if text genuinely expresses buying/service request, recommendation, price/quote or need. Otherwise research. Ground summaries in supplied evidence.",input:JSON.stringify({business:{name:business.name,type:business.business_type,niche:business.niche,services:business.services},area,results:payload}),max_output_tokens:900})});
+  const response=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{"Authorization":"Bearer "+key,"Content-Type":"application/json"},signal:controller.signal,body:JSON.stringify({model:"gpt-6-luna",instructions:"Classify public web/news evidence for a local business lead-discovery system. Never infer or invent a person's identity, contact details, purchase, or private data. SEO listicles, rankings, guides and general news are research—not buyer intent. Public search results are not confirmed leads. Return a JSON object with items [{id,relevance_score 0-100,intent_type explicit|question|research,summary,reason}]. Score relevance to the business and area. Only use explicit/question if text genuinely expresses buying/service request, recommendation, price/quote or need. Otherwise research. Ground summaries in supplied evidence.",input:JSON.stringify({business:{name:business.name,type:business.business_type,niche:business.niche,services:business.services},area,results:payload}),max_output_tokens:900})});
   if(!response.ok)return null;const body=await response.json();const text=(Array.isArray(body.output)?body.output:[]).flatMap((o:any)=>Array.isArray(o.content)?o.content:[]).filter((c:any)=>c.type==="output_text").map((c:any)=>c.text||"").join("").trim();if(!text)return null;
   const parsed=JSON.parse(text);return Array.isArray(parsed.items)?parsed.items:null;
  }catch{return null;}finally{clearTimeout(timer);}
@@ -75,7 +76,7 @@ async function createDailyDraft(admin:any,biz:any,area:string,category:string,ca
  }
  if(!content){const service=(biz.services||[]).find((x:any)=>String(x||"").trim())||biz.niche||biz.business_type||"हमारी सेवाएं";content="स्थानीय जानकारी / Local tip\n\n"+area+" में "+service+" के बारे में सोच रहे हैं? अपनी जरूरत, पसंद और बजट पहले स्पष्ट करें ताकि सही विकल्प चुनने में मदद मिले।\n\n"+(biz.name||"हमारा व्यवसाय")+" से अपनी genuine enquiry भेजें। कोई भी जानकारी या उपलब्धता संपर्क करके confirm करें."; }
  const saved=await admin.from("leadpilot_content_drafts").insert({business_id:biz.id,title,content,channel:"Organic social",status:"draft"}).select("id").single();
- if(saved.error)return "draft-save-error";
+ if(saved.error)return "draft-save-error: "+saved.error.message;
  return mode==="ai"?"ai-draft-created":"template-draft-created";
 }
 Deno.serve(async(req)=>{
@@ -126,11 +127,12 @@ Deno.serve(async(req)=>{
    let savedCount=0,explicitCount=0,questionCount=0,newCount=0;
    for(let i=0;i<candidates.length;i++){
     const item=candidates[i],evidence=(item.title+" — "+(item.description||"")+" — "+item.domain+" — "+item.date).slice(0,2000),heur=classify(evidence,terms,area),aiItem=ai?.find((x:any)=>Number(x.id)===i);
-    const intent=aiItem?.intent_type==="explicit"||aiItem?.intent_type==="question"||aiItem?.intent_type==="research"?aiItem.intent_type:heur.intent;
+    const aiIntent=aiItem?.intent_type==="explicit"||aiItem?.intent_type==="question"||aiItem?.intent_type==="research"?aiItem.intent_type:heur.intent;
+    const intent=heur.editorial?"research":aiIntent;
     const relevance=Number.isFinite(Number(aiItem?.relevance_score))?Math.max(0,Math.min(100,Number(aiItem.relevance_score))):heur.score;
     const score=Math.round(Math.max(0,Math.min(100,relevance+(heur.areaMatch?5:0))));
     const matched=heur.matched;
-    if(intent==="research"||score<40||matched.length===0)continue;
+    if(intent==="research"||score<50||matched.length===0)continue;
     const summary=String(aiItem?.summary||item.title||"Public web intent signal").slice(0,500);
     const reason=String(aiItem?.reason||("Matched terms: "+matched.join(", "))).slice(0,400);
     const dedupe=norm(item.url+"|"+item.title).slice(0,500);
