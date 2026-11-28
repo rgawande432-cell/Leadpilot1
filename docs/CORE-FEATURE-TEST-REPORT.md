@@ -23,7 +23,7 @@ Updated: 28 November 2026
 - Database tables for businesses, leads, content drafts, campaign drafts, follow-ups, notifications, discovery jobs/runs/signals and prospects are present.
 - Current database record counts: 2 businesses; 0 leads; 0 content drafts; 0 campaign drafts; 0 follow-ups; 0 notifications; 0 intent signals. No real records were seeded.
 
-## Feature readiness
+## Updates completed 28 November 2026\n\n- Free public intent-search fallback now tries GDELT first, then Google News RSS, then Bing News RSS (no API keys required for these public news RSS sources). Source-gating still checks the enabled and terms-reviewed catalog entry before searching. Search results remain candidates only; no contacts are scraped or leads auto-created.\n- Content Studio free fallback now creates business-specific posts, FAQs and campaign plans in Hindi or English based on the requested language, with review disclaimers. It remains labelled as templates, not AI output.\n- Supabase production Edge Functions deployed: `public-intent-search` version 13 and `content-generation` version 7, both ACTIVE.\n- GitHub source synchronized on `main`: commit `e380d30ba6c086de189ed74e1c57dd155ccd03fe` for RSS fallback and `21c409c8418269bd32f52960725a5cfc6777a9c0` for Hindi template support.\n- Live authenticated UI/owner-session tests remain blocked without a user test session; public RSS endpoint access was not directly testable through the web inspection tool.\n\n## Feature readiness
 
 | Feature | Status | Verification notes |
 |---|---|---|
