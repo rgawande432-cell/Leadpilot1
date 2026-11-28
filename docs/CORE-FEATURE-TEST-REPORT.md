@@ -73,7 +73,7 @@ Sample: Grabclever Digital Marketing, Pune; website omitted. Existing owner-scop
 - [x] Transactional save checks for content and campaign draft tables (rolled back).
 - [x] Confirmed all QA transactions rolled back; production counts remain 0 leads, 0 drafts, 0 campaigns, 0 notifications, 0 follow-ups.
 - [x] Requeued the previously failed discovery scan and verified scheduled worker completed it using Google News RSS fallback. Search returned 0 pending candidates, correctly avoiding fabricated leads.
-- [x] Improved process-discovery-scan fallback and deployed version 13 ACTIVE: GDELT -> expanded Google News RSS queries (30-day window) -> Bing News RSS, with broader local terms. Source attribution is preserved.
+- [x] Improved process-discovery-scan fallback and deployed version 14 ACTIVE: GDELT -> expanded Google News RSS queries (30-day window) -> Bing News RSS, with broader local terms. Source attribution is preserved.
 - [x] GitHub main synchronized with the worker fix.
 
 ## Still not fully E2E verified
