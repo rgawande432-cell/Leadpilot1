@@ -83,3 +83,11 @@ Status snapshot: 27 November 2026. Continue from existing code; do not reset com
 - A previously failed discovery scan was requeued and completed via Google News RSS fallback. It returned zero pending candidates; no leads were fabricated.
 - Discovery scan worker deployed as ACTIVE version 14 with GDELT -> broader Google News RSS queries (30-day window) -> Bing News RSS fallback.
 - Owner-session UI end-to-end verification remains pending. Do not label all UI features fully green until an owner session can exercise the dashboard, public enquiry flow, CRM, notification UI, follow-ups and analytics.
+
+
+## Domain status update — 28 November 2026
+
+- `urbanbuying.com` is attached to the `leadpilot1` Vercel project and Vercel reports `verified=true`.
+- Cloudflare authoritative nameservers confirmed; Vercel reports DNS config `misconfigured=false` with no conflicts.
+- Owner-confirmed DNS records point to Vercel apex targets and Vercel www CNAME, with Cloudflare proxy enabled on all three records.
+- Final browser HTTPS/homepage smoke test remains pending; the web inspection channel could not load the apex URL.
