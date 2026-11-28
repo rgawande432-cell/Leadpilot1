@@ -447,11 +447,39 @@ body.motion-override:before,body.motion-override:after{content:"";position:fixed
 </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
-})();
+<script>
+function ensureSupabaseSDK(){
+ if(window.supabase&&typeof window.supabase.createClient==='function')return Promise.resolve(true);
+ return new Promise(resolve=>{
+  const sources=[
+   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
+   'https://unpkg.com/@supabase/supabase-js@2'
+  ];
+  let index=0,settled=false;
+  const finish=ok=>{if(settled)return;settled=true;resolve(ok);};
+  const tryNext=()=>{
+   if(index>=sources.length){finish(false);return;}
+   const script=document.createElement('script');
+   script.src=sources[index++];script.async=true;
+   script.onload=()=>finish(!!(window.supabase&&window.supabase.createClient));
+   script.onerror=tryNext;
+   document.head.appendChild(script);
+  };
+  tryNext();
+  setTimeout(()=>finish(!!(window.supabase&&window.supabase.createClient)),15000);
+ });
+}
 </script>
 <script>
-(()=>{
+(async()=>{
+const sdkReady=await ensureSupabaseSDK();
+if(!sdkReady){
+ const notice=document.createElement('div');
+ notice.style.cssText='position:fixed;z-index:99999;left:12px;right:12px;top:12px;background:#fff3e8;color:#7d2b00;border:1px solid #d85a0b;border-radius:12px;padding:14px;font:14px Arial;box-shadow:0 5px 25px #0002';
+ notice.textContent='Connection to the app service could not be loaded. Please check internet or reload this page.';
+ document.body.appendChild(notice);
+ return;
+}
 const db=window.supabase.createClient(
 'https://hbuttmjdlzqwxlqdkgca.supabase.co',
 'sb_publishable_rHbGO86cBuo3tlGmtKl9DA_fRDlJl-N'
