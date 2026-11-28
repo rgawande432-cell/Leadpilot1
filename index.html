@@ -158,6 +158,30 @@ input,textarea,select{min-width:0;max-width:100%}
 .stat{background:#fff7f0!important}
 input:focus,textarea:focus,select:focus{outline:2px solid #f2b88e;outline-offset:1px;border-color:var(--brand)!important}
 a{color:var(--brand-dark)}
+/* Original UrbanLeads 3D Opportunity Engine homepage experience */
+.urban-hero{position:relative;min-height:560px;padding:clamp(36px,5vw,76px) 0;grid-template-columns:minmax(0,1fr) minmax(360px,1fr);gap:clamp(22px,4vw,64px);align-items:center}
+.urban-hero-copy{position:relative;z-index:2}.urban-hero h1{max-width:720px;font-size:clamp(42px,6.6vw,76px);letter-spacing:-2.6px}.hero-gradient{background:linear-gradient(110deg,#ff9c43,#d85a0b 45%,#8f3300);-webkit-background-clip:text;background-clip:text;color:transparent}.urban-hero-copy p{max-width:610px;font-size:clamp(16px,1.5vw,19px)}.hero-trust{font-size:12px;color:#80502e;display:flex;align-items:center;gap:8px;margin-top:14px}.trust-dot,.caption-pulse{width:7px;height:7px;border-radius:50%;background:#ed7b25;box-shadow:0 0 12px #ff9b4a;display:inline-block}
+.urban-engine-visual{position:relative;min-height:470px;height:min(50vw,560px);border-radius:28px;overflow:hidden;background:radial-gradient(ellipse at 50% 50%,#3c200f 0%,#1a120e 38%,#0b0b0e 76%);border:1px solid rgba(255,155,74,.26);perspective:1100px;isolation:isolate;box-shadow:0 28px 80px rgba(74,31,4,.24)}
+.engine-grid{position:absolute;inset:-20%;background-image:linear-gradient(rgba(255,147,54,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(255,147,54,.08) 1px,transparent 1px);background-size:38px 38px;transform:rotateX(63deg) translateY(25%);mask-image:linear-gradient(transparent,#000 25%,#000 78%,transparent);opacity:.7}
+.engine-halo{position:absolute;width:72%;aspect-ratio:1;left:14%;top:14%;border-radius:50%;background:radial-gradient(circle,rgba(255,117,17,.17),transparent 65%);filter:blur(12px)}.halo-two{width:48%;left:26%;top:26%;background:radial-gradient(circle,rgba(255,182,95,.14),transparent 65%)}
+.engine-core{position:absolute;left:50%;top:50%;width:38%;aspect-ratio:1;transform:translate(-50%,-50%);z-index:3;filter:drop-shadow(0 0 24px rgba(255,111,12,.45));animation:core-float 6s ease-in-out infinite}
+.core-glass{position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle at 35% 28%,#ffd08a 0,#ff8c25 9%,#a94309 25%,rgba(43,20,8,.88) 58%,rgba(255,113,12,.12) 70%,transparent 74%);border:1px solid rgba(255,184,103,.65);box-shadow:inset 0 0 28px rgba(255,155,53,.48),0 0 50px rgba(255,109,10,.28);display:flex;align-items:center;justify-content:center;flex-direction:column;overflow:hidden}
+.core-glass:before,.core-glass:after{content:"";position:absolute;inset:9%;border-radius:50%;border:1px solid rgba(255,197,122,.55);transform:rotateX(62deg) rotateZ(25deg);box-shadow:0 0 15px rgba(255,140,36,.3)}.core-glass:after{inset:17%;transform:rotateY(64deg) rotateZ(-26deg);border-color:rgba(255,115,24,.65)}
+.core-lines{position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent 0 8px,rgba(255,200,126,.09) 9px 10px);opacity:.6}.core-symbol{font-size:clamp(45px,7vw,76px);font-weight:900;color:#fff5d8;text-shadow:0 0 22px #ff9c3c;line-height:1;z-index:1}.core-label{z-index:1;text-align:center;font-size:8px;letter-spacing:2px;font-weight:800;color:#ffe1b3;margin-top:5px}
+.engine-orbit{position:absolute;left:50%;top:50%;width:70%;height:70%;transform:translate(-50%,-50%);border:1px solid rgba(255,167,85,.42);border-radius:50%;z-index:2;animation:orbit-turn 22s linear infinite}.orbit-two{width:88%;height:54%;transform:translate(-50%,-50%) rotateX(67deg) rotateZ(-28deg);border-color:rgba(255,117,26,.48);animation-duration:30s}.orbit-one{transform:translate(-50%,-50%) rotateX(70deg) rotateZ(34deg)}.orbit-node{position:absolute;display:grid;place-items:center;width:36px;height:36px;border-radius:50%;color:#ffd09b;background:rgba(47,24,10,.9);border:1px solid rgba(255,164,71,.65);box-shadow:0 0 22px rgba(255,123,21,.25);font-size:20px}.node-search{top:3%;left:18%}.node-content{bottom:3%;right:15%}.node-leads{top:4%;right:17%}.node-growth{bottom:3%;left:15%}
+.engine-module{position:absolute;z-index:4;display:flex;align-items:center;gap:10px;padding:10px 13px;border:1px solid rgba(255,165,82,.35);border-radius:13px;background:linear-gradient(130deg,rgba(32,22,16,.92),rgba(69,32,12,.74));backdrop-filter:blur(10px);box-shadow:0 10px 32px rgba(0,0,0,.3);color:#fff1dd;min-width:135px}.engine-module strong{display:block;font-size:12px}.engine-module small{display:block;color:#c99c76;font-size:10px;margin-top:3px}.module-icon{width:29px;height:29px;display:grid;place-items:center;border-radius:9px;background:rgba(255,132,35,.14);color:#ffad62;font-size:18px}.module-discovery{left:4%;top:20%}.module-content{right:4%;top:21%}.module-crm{left:4%;bottom:22%}.module-growth{right:4%;bottom:22%}
+.engine-scan{position:absolute;z-index:5;left:0;right:0;top:-25%;height:2px;background:linear-gradient(90deg,transparent,rgba(255,181,103,.75),transparent);box-shadow:0 0 22px #ff8b28;animation:scan-move 8s ease-in-out infinite;opacity:.5}.engine-visual-caption{position:absolute;z-index:5;bottom:18px;left:50%;transform:translateX(-50%);font-size:9px;letter-spacing:1.2px;color:#bd8c64;white-space:nowrap;display:flex;align-items:center;gap:8px}.caption-sep{color:#7c4a25}
+.engine-intro{padding:65px 0 28px}.engine-intro-head{text-align:center;max-width:760px;margin:0 auto 28px}.engine-intro-head h2{font-size:clamp(30px,4.5vw,50px);letter-spacing:-1.5px}.engine-intro-head p{max-width:600px;margin:10px auto}.engine-system-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.engine-system-card{background:linear-gradient(160deg,#fff,#fff7f0);border:1px solid #f3c7a4;border-radius:18px;padding:15px;min-width:0;transition:transform .3s ease,box-shadow .3s ease}.engine-system-card:hover{transform:translateY(-5px);box-shadow:0 15px 30px rgba(168,61,0,.1)}.system-visual{height:170px;border-radius:13px;overflow:hidden;position:relative;background:radial-gradient(circle at 50% 40%,#502609,#1b120d 70%);margin-bottom:15px;display:grid;place-items:center}.system-number{font-size:10px;letter-spacing:1.3px;font-weight:800;color:#bc5914}.engine-system-card h3{margin:8px 0}.engine-system-card p{font-size:13px;line-height:1.55;margin:0}.visual-radar{width:145px;height:145px;border-radius:50%;border:1px solid rgba(255,160,70,.4);background:repeating-radial-gradient(circle,transparent 0 22px,rgba(255,159,63,.16) 23px 24px);position:relative;display:grid;place-items:center;box-shadow:0 0 35px rgba(255,112,12,.15)}.visual-radar:after{content:"";position:absolute;width:50%;height:50%;border-radius:50%;background:conic-gradient(from 0deg,transparent,rgba(255,147,42,.3),transparent 45%);animation:orbit-turn 5s linear infinite}.visual-radar i{position:absolute;width:6px;height:6px;border-radius:50%;background:#ffb05c;box-shadow:0 0 12px #ff9b40}.visual-radar i:nth-child(1){top:22%;left:65%}.visual-radar i:nth-child(2){top:65%;left:22%}.visual-radar i:nth-child(3){top:45%;left:80%}.visual-radar b{z-index:1;color:#ffd19a;font-size:30px}
+.visual-content{perspective:700px}.creative-stack{display:flex;flex-direction:column;gap:5px;transform:rotateY(-18deg) rotateX(8deg);width:118px;padding:12px;background:linear-gradient(145deg,#e77a27,#55230b);box-shadow:15px 15px 0 rgba(255,125,34,.13),25px 25px 28px rgba(0,0,0,.3);border:1px solid #ffbd76;border-radius:12px;color:#fff;font-size:10px;letter-spacing:1px}.creative-stack b{font-size:25px;color:#ffe2b7}.creative-stack span{padding:5px 7px;background:rgba(28,14,6,.5);border-radius:5px}
+.lead-cubes{position:relative;width:140px;height:120px;transform:rotateX(56deg) rotateZ(35deg);transform-style:preserve-3d}.lead-cubes i{position:absolute;width:50px;height:50px;border:1px solid #ffb365;background:linear-gradient(145deg,rgba(255,156,58,.3),rgba(83,33,9,.7));box-shadow:0 0 24px rgba(255,132,36,.2);border-radius:8px}.lead-cubes i:nth-child(1){left:15px;top:15px}.lead-cubes i:nth-child(2){left:65px;top:15px}.lead-cubes i:nth-child(3){left:40px;top:65px}.lead-cubes b{position:absolute;left:45px;top:40px;color:#ffe0b3;font-size:28px;transform:translateZ(28px)}
+.growth-bars{display:flex;align-items:flex-end;gap:11px;height:120px;padding:15px;position:relative}.growth-bars i{width:19px;border-radius:5px 5px 0 0;background:linear-gradient(180deg,#ffb160,#a7470a);box-shadow:0 0 16px rgba(255,143,47,.3);height:30%}.growth-bars i:nth-child(2){height:47%}.growth-bars i:nth-child(3){height:62%}.growth-bars i:nth-child(4){height:78%}.growth-bars i:nth-child(5){height:100%}.growth-bars b{position:absolute;top:5px;right:2px;color:#ffbf7d;font-size:24px}
+.hero-account-panel{max-width:740px;margin:30px auto 0}
+@keyframes core-float{0%,100%{transform:translate(-50%,-50%) translateY(0) rotate(0)}50%{transform:translate(-50%,-50%) translateY(-9px) rotate(2deg)}}
+@keyframes orbit-turn{from{rotate:0deg}to{rotate:360deg}}
+@keyframes scan-move{0%{top:-15%;opacity:0}12%{opacity:.5}88%{opacity:.45}100%{top:115%;opacity:0}}
+@media(max-width:980px){.urban-hero{grid-template-columns:1fr}.urban-engine-visual{min-height:440px;height:58vw;max-height:540px}.engine-system-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.urban-hero{padding:30px 0 20px;gap:14px}.urban-hero h1{font-size:clamp(36px,10vw,49px);letter-spacing:-1.6px}.urban-engine-visual{min-height:380px;height:430px;border-radius:20px}.engine-core{width:42%}.engine-module{min-width:0;padding:8px 9px;gap:6px}.engine-module strong{font-size:10px}.engine-module small{font-size:9px}.module-icon{width:25px;height:25px;font-size:15px}.module-discovery{left:2%;top:15%}.module-content{right:2%;top:15%}.module-crm{left:2%;bottom:17%}.module-growth{right:2%;bottom:17%}.engine-orbit.orbit-one{width:80%;height:75%}.engine-orbit.orbit-two{width:94%;height:57%}.engine-visual-caption{font-size:7px;letter-spacing:.6px;bottom:12px}.engine-intro{padding:42px 0 20px}.engine-system-grid{grid-template-columns:1fr}.system-visual{height:190px}.hero-account-panel{margin-top:18px}}
+@media(prefers-reduced-motion:reduce){.engine-core,.engine-orbit,.visual-radar:after,.engine-scan{animation:none!important}.engine-system-card{transition:none}}
 </style>
 </head>
 <body>
@@ -170,27 +194,39 @@ a{color:var(--brand-dark)}
 </div>
 </nav>
 
-<section class="hero">
-<div>
-<span class="tag">Organic growth for local businesses</span>
-<h1>Turn local interest into customer enquiries.</h1>
-<p>Manage your business profile, organise incoming enquiries and get practical content ideas. Your own website is optional.</p>
+<section class="hero urban-hero">
+<div class="urban-hero-copy">
+<span class="tag">Organic growth intelligence for local businesses</span>
+<h1>Meet your <span class="hero-gradient">AI Opportunity Engine.</span></h1>
+<p>Discover customer intent, create growth content, organise genuine enquiries and turn local opportunity into action. No website required.</p>
 <div class="actions">
-<button class="btn" id="heroStart">Create business profile</button>
-<a class="btn alt" href="#features">Explore features</a>
+<button class="btn" id="heroStart">Start with your business</button>
+<a class="btn alt" href="#engine">Explore the AI engine</a>
 </div>
+<div class="hero-trust"><span class="trust-dot"></span> Real workflows · Transparent activity · Built for local business</div>
 </div>
-<div class="panel">
-<span class="tag">Your account overview</span>
-<h2>One simple workspace</h2>
-<div class="stats">
-<div class="stat">Enquiries<strong id="heroCount">—</strong></div>
-<div class="stat">New<strong id="heroNew">—</strong></div>
-<div class="stat">Profile<strong id="heroProfile">—</strong></div>
-</div>
-<p class="small">Only your actual saved account data is displayed. No demo leads.</p>
+<div class="urban-engine-visual" aria-label="Illustration of the UrbanLeads AI Opportunity Engine">
+<div class="engine-grid"></div><div class="engine-halo halo-one"></div><div class="engine-halo halo-two"></div>
+<div class="engine-orbit orbit-one"><span class="orbit-node node-search">⌕</span><span class="orbit-node node-content">✦</span></div>
+<div class="engine-orbit orbit-two"><span class="orbit-node node-leads">◎</span><span class="orbit-node node-growth">↗</span></div>
+<div class="engine-core"><div class="core-glass"><div class="core-lines"></div><div class="core-symbol">U</div><span class="core-label">OPPORTUNITY<br>ENGINE</span></div></div>
+<div class="engine-module module-discovery"><span class="module-icon">⌕</span><div><strong>Discovery</strong><small>Customer intent</small></div></div>
+<div class="engine-module module-content"><span class="module-icon">✦</span><div><strong>Content AI</strong><small>Ideas & creatives</small></div></div>
+<div class="engine-module module-crm"><span class="module-icon">◎</span><div><strong>Lead intelligence</strong><small>Enquiry workflow</small></div></div>
+<div class="engine-module module-growth"><span class="module-icon">↗</span><div><strong>Growth signals</strong><small>Insights & actions</small></div></div>
+<div class="engine-scan"></div><div class="engine-visual-caption"><span class="caption-pulse"></span> URBANLEADS INTELLIGENCE SYSTEM <span class="caption-sep">/</span> VISUAL OVERVIEW</div>
 </div>
 </section>
+<section class="engine-intro" id="engine">
+<div class="engine-intro-head"><span class="tag">Inside the engine</span><h2>One intelligence layer.<br><span class="hero-gradient">Four growth systems.</span></h2><p>Every module has a clear job—from understanding your business to helping you act on opportunities.</p></div>
+<div class="engine-system-grid">
+<article class="engine-system-card"><div class="system-visual visual-discovery"><div class="visual-radar"><i></i><i></i><i></i><b>⌕</b></div></div><span class="system-number">01 / DISCOVER</span><h3>Intent Discovery</h3><p>Explore relevant customer questions, public signals and opportunity themes. Results depend on available sources.</p></article>
+<article class="engine-system-card"><div class="system-visual visual-content"><div class="creative-stack"><b>✦</b><span>IDEA</span><span>CREATE</span><span>GROW</span></div></div><span class="system-number">02 / CREATE</span><h3>Content Intelligence</h3><p>Turn business context into useful post ideas, captions, creative directions and campaign plans.</p></article>
+<article class="engine-system-card"><div class="system-visual visual-leads"><div class="lead-cubes"><i></i><i></i><i></i><b>◎</b></div></div><span class="system-number">03 / QUALIFY</span><h3>Enquiry CRM</h3><p>Organise incoming enquiries, identify duplicates and prioritise follow-up with a clear workflow.</p></article>
+<article class="engine-system-card"><div class="system-visual visual-growth"><div class="growth-bars"><i></i><i></i><i></i><i></i><i></i><b>↗</b></div></div><span class="system-number">04 / IMPROVE</span><h3>Growth Intelligence</h3><p>Review your activity and insights, then choose practical next steps for your local business.</p></article>
+</div>
+</section>
+<section class="hero-account-panel" aria-label="Account overview"><div class="panel"><span class="tag">Your account overview</span><h2>One simple workspace</h2><div class="stats"><div class="stat">Enquiries<strong id="heroCount">—</strong></div><div class="stat">New<strong id="heroNew">—</strong></div><div class="stat">Profile<strong id="heroProfile">—</strong></div></div><p class="small">Only your actual saved account data is displayed. No demo leads.</p></div></section>
 
 <section id="features">
 <span class="tag">Features</span>
