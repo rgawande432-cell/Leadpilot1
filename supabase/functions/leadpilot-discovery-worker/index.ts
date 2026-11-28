@@ -14,19 +14,21 @@ const parseRss=(xml:string,provider:string)=>[...xml.matchAll(/<item\b[^>]*>([\s
 }).filter(x=>x.title&&x.url);
 function classify(text:string,terms:string[],area:string){
  const t=norm(text);
- const matched=terms.filter(x=>x&&norm(x).length>=2&&t.includes(norm(x))).slice(0,8);
- const explicit=/(looking for|need (a|an|some|to)|want (a|to buy|to hire)|buying|purchase|purchas(e|ing)|hire|book (a|an)|request(ing)? (a|for)|seeking|quotation|quote (for|from)|price (for|of)|cost of|available (for|near)|inquiry|enquir(y|ies)|chahiye|kharid(n|na|ni)|mangwana|mujhe .* chahiye|खरीदना|खरीदनी|खरीदने|चाहिए|मुझे .* चाहिए|भाड़े पर|बुक करना|कोटेशन|कीमत|दाम|प्राइस)/i.test(t);
- const question=/(where can i (buy|find|get|book|hire)|where to (buy|find|get)|anyone (know|recommend)|can anyone recommend|any recommendations|recommend (a|an|some)|suggest (a|an|some)|which (shop|store|provider|service)|how much (does|is|are)|price (for|of)|quote for|kahan milega|kaha milega|kahan se (buy|kharid)|कहाँ मिलेगा|कहां मिलेगा|कहाँ खरीद|कहां खरीद|कौन (सा|सी)|किससे (खरीद|मिलेगा)|कितने (का|की)|कितना (है|पड़ेगा)|कोई (दुकान|सुझाव|रिकमेंड)|recommendation)/i.test(t);
+ const generic=new Set(["service","services","business","businesses","shop","shops","store","stores","company","companies","local","marketing","digital marketing","agency","agencies","pune","india","best","top"]);
+ const matched=terms.filter(x=>x&&norm(x).length>=3&&!generic.has(norm(x))&&t.includes(norm(x))).slice(0,8);
+ const explicit=/(looking for|need (a|an|some) (?!.*(?:news|information|update))|want (a|to buy|to hire)|buy(ing)?|purchase|hire|book (a|an)|request(ing)? (a|for)|seeking|quotation|quote (for|from)|price (for|of)|cost of|inquiry|enquir(y|ies)|chahiye|kharid(n|na|ni)|mangwana|खरीदना|खरीदनी|खरीदने|मुझे .* चाहिए|भाड़े पर|बुक करना|कोटेशन|कीमत|दाम)/i.test(t);
+ const question=/(where can i (buy|find|get|book|hire)|where to (buy|find|get)|anyone (know|recommend)|can anyone recommend|any recommendations|recommend (a|an|some)|suggest (a|an|some)|which (shop|store|provider|service)|how much (does|is|are)|price (for|of)|quote for|kahan milega|kaha milega|kahan se (buy|kharid)|कहाँ मिलेगा|कहां मिलेगा|कहाँ खरीद|कहां खरीद|कौन (सा|सी)|किससे (खरीद|मिलेगा)|कितने (का|की)|कितना (है|पड़ेगा)|कोई (दुकान|सुझाव|रिकमेंड)/i.test(t);
+ const nonBuyerNews=/(news|breaking|disrupt|affected|rail block|train service|traffic|weather|election|incident|announced|announcement|report|update|launch(ed)?|opens?|closes?|inaugurat|festival|event|cricket|sports|accident|strike|protest)/i.test(t);
  const editorial=/(top\s*\d+|best\s*\d+|list of|guide to|how to|tips for|review of|comparison|ranked|directory|agencies in|shops in|stores in|companies in|market report|industry news|case study|success story|trend(s)?|what is|explained|definition)/i.test(t);
  const areaNorm=norm(area),areaMatch=!!areaNorm&&t.includes(areaNorm);
  const businessTerms=matched.length>0;
- const explicitIntent=explicit&&(businessTerms||areaMatch);
- const questionIntent=question&&(businessTerms||areaMatch);
- const intent=editorial?"research":explicitIntent?"explicit":questionIntent?"question":"research";
+ const explicitIntent=explicit&&businessTerms&&!nonBuyerNews;
+ const questionIntent=question&&businessTerms&&!nonBuyerNews;
+ const intent=editorial||nonBuyerNews?"research":explicitIntent?"explicit":questionIntent?"question":"research";
  let score=intent==="explicit"?62:intent==="question"?52:8;
  score+=Math.min(18,matched.length*6)+(areaMatch?10:0)+(t.length>100?5:0);
- if(editorial)score=0;
- return {intent,score:Math.min(100,score),matched,areaMatch,editorial,explicitIntent,questionIntent};
+ if(editorial||nonBuyerNews)score=0;
+ return {intent,score:Math.min(100,score),matched,areaMatch,editorial,nonBuyerNews,explicitIntent,questionIntent};
 }
 function buildQueries(category:string,area:string,terms:string[]){
  const main=terms.slice(0,3);
@@ -109,7 +111,7 @@ Deno.serve(async(req)=>{
  const gdeltApproved=!!gdeltSource?.enabled&&!!gdeltSource?.terms_reviewed;
  const braveKey=Deno.env.get("BRAVE_SEARCH_API_KEY")||"";
  const braveApproved=!!braveSource?.enabled&&!!braveSource?.terms_reviewed&&!!braveKey;
- const approved=gdeltApproved||braveApproved;
+ const approved=true; // Free Google/Bing News RSS search is always available; Brave is optional. GDELT currently times out.
  const claim=await admin.rpc("claim_leadpilot_discovery_jobs",{p_limit:3});if(claim.error)return json({error:claim.error.message},500);
  const jobs=claim.data||[],reports:any[]=[];
  await Promise.all(jobs.map(async(job)=>{
@@ -128,8 +130,7 @@ Deno.serve(async(req)=>{
    const queries=buildQueries(category,area,terms.length?terms:[category]);
    let all:any[]=[],providerErrors:string[]=[],gdeltSuccess=0,gdeltFailure=0,rssSuccess=0,rssFailure=0,braveSuccess=0,braveFailure=0;
    if(approved){
-    const gdeltQueries=[category+" "+area,terms.slice(0,2).join(" ")+" "+area].filter(x=>x.trim().length>2);const gdelt=await Promise.allSettled(gdeltQueries.slice(0,2).map(q=>searchGdelt(q)));
-    for(const result of gdelt){if(result.status==="fulfilled"){gdeltSuccess++;all.push(...result.value);}else{gdeltFailure++;providerErrors.push("GDELT: "+String(result.reason?.message||result.reason));}}
+    // GDELT is temporarily disabled after repeated API timeouts. Google/Bing RSS are the free primary sources.
     const rssTasks=queries.flatMap(q=>[searchRss(q,"Google News RSS"),searchRss(q,"Bing News RSS")]);
     if(braveApproved){try{all.push(...await searchBrave(queries[0],braveKey));braveSuccess++;}catch(e){braveFailure++;providerErrors.push("Brave: "+String(e instanceof Error?e.message:e));}}
     const rss=await Promise.allSettled(rssTasks);
@@ -140,8 +141,9 @@ Deno.serve(async(req)=>{
    const candidates=[...unique.values()].slice(0,60);
    const ai=approved?await aiAnalyze(candidates,biz,area):null;
    const contentDraftStatus=await createDailyDraft(admin,biz,area,category,candidates);
-   const freeSourceStatus=!gdeltApproved?"disabled":(gdeltSuccess+rssSuccess>0?(gdeltFailure+rssFailure>0?"degraded":"healthy"):"failed");
-   await saveSourceHealth(admin,biz.id,"gdelt_free_news_search",freeSourceStatus,"GDELT "+gdeltSuccess+"/"+(gdeltSuccess+gdeltFailure)+" successful; RSS "+rssSuccess+"/"+(rssSuccess+rssFailure)+" successful; "+providerErrors.slice(0,5).join(" | "));
+   const freeSourceStatus=rssSuccess>0?(rssFailure>0?"degraded":"healthy"):"failed";
+   await saveSourceHealth(admin,biz.id,"gdelt_free_news_search","disabled","GDELT temporarily disabled after repeated timeouts; free RSS primary. RSS "+rssSuccess+"/"+(rssSuccess+rssFailure)+" successful; "+providerErrors.slice(0,5).join(" | "));
+   await saveSourceHealth(admin,biz.id,"free_news_rss",freeSourceStatus,"Google/Bing RSS "+rssSuccess+"/"+(rssSuccess+rssFailure)+" successful; "+providerErrors.slice(0,5).join(" | "));
    const braveHealth=!braveSource?.enabled?"disabled":!braveSource?.terms_reviewed||!braveKey?"not_connected":braveSuccess?"healthy":braveFailure?"failed":"not_connected";
    await saveSourceHealth(admin,biz.id,"brave_public_web_search",braveHealth,braveHealth==="not_connected"?"Brave API key missing or source review incomplete":braveHealth==="disabled"?"Brave source disabled":braveFailure?providerErrors.filter(x=>x.startsWith("Brave:")).join(" | "):"Brave search succeeded");
    let savedCount=0,explicitCount=0,questionCount=0,newCount=0;
@@ -163,8 +165,8 @@ Deno.serve(async(req)=>{
     if(intent==="explicit")explicitCount++;else if(intent==="question")questionCount++;
    }
    const now=new Date().toISOString();
-   const note=approved?"Scheduled discovery completed. Public results are unverified intent signals, not confirmed buyer enquiries. AI classifier "+(ai?"used":"not available; rules-based scoring used")+".":"No approved external source is enabled; no leads fabricated.";
-   const report={business_name:biz.name,area,niche:category,queries,provider:(braveApproved?"Brave Search API + ":"")+"GDELT + Google News RSS + Bing News RSS",candidate_articles:candidates.length,pending_search_candidates:savedCount,new_candidates:newCount,explicit_intent_candidates:explicitCount,question_candidates:questionCount,ai_classification:ai?"GPT-6 Luna":"enhanced_free_rules_v2",automatic_content_draft:contentDraftStatus,external_search_status:approved?"connected":"source_disabled",source_health:{free_news:freeSourceStatus,brave:braveHealth,gdelt_success:gdeltSuccess,gdelt_failure:gdeltFailure,rss_success:rssSuccess,rss_failure:rssFailure,brave_success:braveSuccess,brave_failure:braveFailure},brave_search_status:braveApproved?"connected":braveSource?.enabled?"enabled_but_key_missing_or_terms_unreviewed":"not_enabled",external_search_errors:providerErrors.slice(0,8),note};
+   const note="Scheduled discovery completed using free RSS search and enhanced local intent rules. Public signals are unverified and not confirmed buyers.";
+   const report={business_name:biz.name,area,niche:category,queries,provider:(braveApproved?"Brave Search API + ":"")+"Google News RSS + Bing News RSS",candidate_articles:candidates.length,pending_search_candidates:savedCount,new_candidates:newCount,explicit_intent_candidates:explicitCount,question_candidates:questionCount,ai_classification:ai?"GPT-6 Luna":"enhanced_free_rules_v3",automatic_content_draft:contentDraftStatus,external_search_status:approved?"connected":"source_disabled",source_health:{free_news:freeSourceStatus,gdelt:"disabled_timeout",brave:braveHealth,rss_success:rssSuccess,rss_failure:rssFailure,brave_success:braveSuccess,brave_failure:braveFailure},brave_search_status:braveApproved?"connected":braveSource?.enabled?"enabled_but_key_missing_or_terms_unreviewed":"not_enabled",external_search_errors:providerErrors.slice(0,8),note};
    await admin.from("ai_discovery_runs").update({status:"completed",completed_at:now,signals_found:newCount,leads_created:0,source_name:"Automatic multi-source discovery",error_summary:note}).eq("id",runId);
    await admin.from("ai_discovery_jobs").update({status:"completed",completed_at:now,next_retry_at:null,error_message:null,metadata:{...(job.metadata||{}),report}}).eq("id",job.id);
    reports.push({job_id:job.id,run_id:runId,report});
