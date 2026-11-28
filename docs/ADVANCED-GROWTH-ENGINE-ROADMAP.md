@@ -81,5 +81,5 @@ Status snapshot: 27 November 2026. Continue from existing code; do not reset com
 - Transaction-only database QA passed for new-enquiry notification, lead status-change notification, valid follow-up and cross-business follow-up rejection; all test inserts were rolled back.
 - Content draft and campaign draft table save checks passed in rollback transactions.
 - A previously failed discovery scan was requeued and completed via Google News RSS fallback. It returned zero pending candidates; no leads were fabricated.
-- Discovery scan worker deployed as ACTIVE version 13 with GDELT -> broader Google News RSS queries (30-day window) -> Bing News RSS fallback.
+- Discovery scan worker deployed as ACTIVE version 14 with GDELT -> broader Google News RSS queries (30-day window) -> Bing News RSS fallback.
 - Owner-session UI end-to-end verification remains pending. Do not label all UI features fully green until an owner session can exercise the dashboard, public enquiry flow, CRM, notification UI, follow-ups and analytics.
