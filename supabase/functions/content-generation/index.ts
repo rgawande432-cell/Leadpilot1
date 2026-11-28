@@ -47,7 +47,7 @@ Deno.serve(async(req)=>{
  if(!["posts","faq","campaign"].includes(type))return json({error:"Unsupported content type"},400);
  const key=Deno.env.get("OPENAI_API_KEY");
  if(!key){const fallback=freeTemplates(business,type,body);return json({status:"template_generated",type,model:"free-local-template-engine",content:fallback.content,language:fallback.language,disclaimer:fallback.disclaimer});}
- const model=Deno.env.get("OPENAI_MODEL")||"gpt-6.2-astra";
+ const model=Deno.env.get("OPENAI_MODEL")||"gpt-6-luna";
  const services=Array.isArray(business.services)?business.services.join(", "):String(business.services||"");
  const instructions="You are an organic local-business marketing assistant. Produce truthful, non-spammy content in the language requested. Do not invent prices, guarantees, certifications, offers, reviews, customer stories, availability or facts. Keep it local and useful, avoid exaggerated claims and ad-like pressure. Use the supplied business details only. If details are missing, ask questions rather than fabricate.";
  const input={business_name:business.name,niche:business.niche||business.business_type,description:business.description,area:business.location,services,phone:business.phone,website:business.website,language:body.language||"Hindi and simple English",goal:body.goal||"organic enquiries",type,topic:body.topic||""};
