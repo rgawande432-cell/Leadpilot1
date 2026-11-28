@@ -26,7 +26,7 @@ Updated: 28 November 2026
 - AI classification and daily organic content generation use GPT-6 Luna when `OPENAI_API_KEY` is available; rules/templates are fallback.
 - Results are URL-deduplicated and strict intent-filtered; public evidence signals are not automatically converted into CRM leads.
 - One organic content draft per business per 24-hour period is generated and saved automatically.
-- Per-business source-health tracking now records source status, last check/success, failure count and diagnostic notes; the dashboard health check displays provider health and latest scan.
+- Per-business source-health tracking records source status, last check/success, failure count and notes; dashboard health check displays provider health and latest scan.
 - Service-role grants for content drafts and source-health table were fixed and verified.
 - New discovery configs default to active and a 4-hour scan interval.
 
@@ -42,10 +42,10 @@ Updated: 28 November 2026
 
 ## Production website
 
-- GitHub main contains the automatic discovery UI updates and 19 sitemap URLs.
-- Vercel production deployments for the automatic-engine UI commit are `READY`; aliases include `urbanbuying.com` and `www.urbanbuying.com`.
-- GitHub commits trigger production Git deployments. Latest UI health-check commit deployment status is being checked.
-- Direct public HTML fetch could not be verified in this check; alias assignment and deployment status are verified.
+- GitHub main contains the automatic discovery UI and provider-health dashboard updates, plus 19 sitemap URLs.
+- A READY Vercel production deployment with `urbanbuying.com` and `www.urbanbuying.com` aliases contains the automatic engine UI changes.
+- The latest app-code deployment is READY; later docs-only deployments are queued/building.
+- Direct public HTML fetch could not be verified in this check; deployment READY state and alias assignment are verified.
 
 ## Important limitations
 
