@@ -5,7 +5,7 @@ Updated: 28 November 2026
 ## Verified infrastructure
 
 - Supabase project `hbuttmjdlzqwxlqdkgca`: `ACTIVE_HEALTHY`.
-- All 7 Edge Functions are ACTIVE. Key latest versions:
+- All 7 Edge Functions are ACTIVE. Latest key versions:
   - `leadpilot-discovery-worker`: v21
   - `content-generation`: v8
   - `public-intent-search`: v13
@@ -13,54 +13,49 @@ Updated: 28 November 2026
   - `provider-status`: v3
   - `submit-lead`: v9
   - `public-business-profile`: v2
-- Five cron jobs are active:
-  - Discovery worker every 5 minutes
-  - Enqueue due scans every 30 minutes
-  - Retry failed scans every 10 minutes
-  - Follow-up reminders every 15 minutes
-  - Intake rate-limit cleanup daily at 03:00
-- Two existing business profiles have active automatic discovery configurations.
-- New business profiles automatically receive an active discovery config through a tested database trigger.
-- Current DB counts: 2 businesses, 2 active discovery configs, 0 CRM enquiries, 0 pending intent signals, 1 rejected signal, 2 organic content drafts.
+- Five cron jobs are active: discovery worker every 5 minutes; enqueue due scans every 30 minutes; retry scans every 10 minutes; follow-up reminders every 15 minutes; rate-limit cleanup daily at 03:00.
+- Two business profiles have active automatic discovery configurations.
+- New business profiles automatically receive active discovery config through a database trigger.
+- Current counts: 2 businesses, 2 active configs, 0 CRM enquiries, 0 pending signals, 1 rejected signal, 2 organic content drafts.
 
 ## Automatic engine implementation
 
-- Discovery worker now runs up to 3 queued jobs concurrently.
-- Search queries are generated from business niche/type, services, keywords and local area.
-- Search providers: GDELT, Google News RSS, Bing News RSS; optional Brave Search API is implemented and catalog-enabled, but its server key is not configured.
-- AI classification and daily content draft generation use GPT-6 Luna when `OPENAI_API_KEY` is available; deterministic rules/templates are the fallback.
-- Candidate results are URL-deduplicated, intent-filtered, scored, and stored as public evidence signals—not automatically converted into CRM leads.
-- Daily organic content drafts are automatically saved to the Content Studio (one draft per business per 24-hour window).
-- Service-role insert/select access for content drafts was fixed and verified.
-- New discovery configs default to active, 4-hour scan intervals, and business-specific keywords.
+- Discovery worker claims up to 3 jobs and processes them concurrently.
+- Business-specific queries use niche/type, services, profile keywords and location.
+- Sources: GDELT, Google News RSS and Bing News RSS; Brave Search API is optional and implemented.
+- AI classification and daily organic content generation use GPT-6 Luna when `OPENAI_API_KEY` is available; rules/templates are fallback.
+- Results are URL-deduplicated and filtered; public evidence signals are not automatically converted into CRM leads.
+- One organic content draft per business per 24-hour period is generated and saved automatically.
+- Service-role access to the content-draft table was fixed and verified.
+- New discovery configs default to active and a 4-hour scan interval.
 
 ## Tests completed
 
-1. Automatic-config trigger test: inserted a temporary sample business, confirmed it received an active config with goal, area, 4-hour schedule and business keywords; test business was deleted afterward.
-2. Discovery worker v20 runtime test: completed successfully; 60 public search/article candidates were collected; strict intent filter retained 0 signals; 0 CRM leads were created.
-3. Earlier v18 scan temporarily captured a misleading SEO listicle ("Top 10 Best Digital Marketing Agencies..."). It was rejected, and the v20/v21 editorial-title filter was tightened to avoid listicles, rankings, guides and general articles being treated as intent.
-4. Automatic daily draft test: a business-specific organic content draft was created automatically and saved to Content Studio as a draft.
-5. Worker v21 parallel-queue test was initiated for two active business profiles; completion is being monitored.
-6. Worker v20 and v21 boot logs confirm the deployed code starts without a syntax/runtime boot error.
+1. **Automatic activation trigger — PASS.** A temporary business profile was inserted; it automatically received an active config, goal, location, 4-hour schedule and keywords. Temporary profile was removed.
+2. **Worker v20 scan — PASS.** 60 public results were collected; strict filtering retained 0 signals and 0 CRM leads.
+3. **False-positive filter — PASS.** A v18 SEO listicle signal was rejected; v20/v21 filter now treats rankings, listicles, guides and general articles as research rather than buyer intent.
+4. **Automatic content draft — PASS.** A business-specific template post was automatically saved to Content Studio.
+5. **Worker v21 parallel processing — PASS.** Two active business jobs were processed concurrently; both completed in about 8 seconds. Both produced 0 signals and 0 CRM leads; one created a daily draft, the other correctly skipped because a draft already existed that day.
+6. **Runtime logs — PASS.** Worker versions 18, 20 and 21 booted successfully.
 
 ## Production website
 
-- GitHub main has the automatic discovery UI changes and all 19 sitemap URLs.
-- Latest Vercel production deployment for commit `827d4dae2166352fe75ac7069e8a7df8963e1922` is `READY`.
-- Vercel deployment aliases include `urbanbuying.com` and `www.urbanbuying.com`.
-- The latest deployment contains the updated automatic-discovery onboarding text. A direct public HTML fetch was not available in this check, so rendered-page verification remains pending.
+- GitHub main contains the automatic discovery UI updates and 19 sitemap URLs.
+- Vercel production deployment for the automatic-engine UI commit is `READY`, and aliases include `urbanbuying.com` and `www.urbanbuying.com`.
+- Latest code commits trigger Vercel production Git deployments automatically. The latest docs-only deployment was still BUILDING during this report update; the UI commit was already READY.
+- Direct public HTML fetch could not be verified in this check; alias assignment and deployment status are verified.
 
-## Important limitations (honest product status)
+## Important limitations
 
-- `BRAVE_SEARCH_API_KEY` is not configured. Brave is enabled in the source catalog but cannot run until the key is added to Supabase Edge Function secrets.
-- `OPENAI_API_KEY` is not configured in the worker runtime. AI classification and AI content generation therefore fall back to deterministic rules/templates.
-- Public news/RSS/search results are weak intent signals, not confirmed buyers or enquiries. No personal contact data is scraped or invented.
-- Automatic content creation is active, but automatic social publishing is not yet connected. Facebook/Instagram, WhatsApp and Google Business Profile integrations still need credentials, account permissions and implementation/testing.
-- Real enquiries are still 0. No fake CRM leads were created.
+- `BRAVE_SEARCH_API_KEY` is missing. Brave is enabled and terms-reviewed in the source catalog, but cannot execute until the server secret is added.
+- `OPENAI_API_KEY` is missing. AI classification and content generation are currently rules/template fallback.
+- Public web/news results are weak intent signals—not confirmed customers or enquiries. No private contacts are scraped or invented.
+- Automatic content creation is active, but automatic social publishing is not connected. Facebook/Instagram, WhatsApp and Google Business Profile require credentials, permissions and publishing workflow implementation.
+- Real enquiries are currently 0. No fake CRM leads were created.
 
-## Next core blockers
+## Remaining core blockers
 
 1. Add `BRAVE_SEARCH_API_KEY` to Supabase Edge Function secrets for broader web-search coverage.
-2. Add `OPENAI_API_KEY` to enable GPT-6 Luna classification and automatic AI content drafts.
-3. Implement authorized automatic publishing/lead-capture integrations (Meta, Google Business Profile, WhatsApp opt-in) and test actual enquiry delivery.
-4. Verify owner-session signup, public enquiry link, submission-to-CRM, notification and follow-up flows end-to-end.
+2. Add `OPENAI_API_KEY` to enable GPT-6 Luna classification and automatic AI content.
+3. Implement authorized automatic publishing/lead-capture integrations and test actual enquiry delivery.
+4. Verify signup, public enquiry link, submit-to-CRM, notifications and follow-ups using an owner test session.
