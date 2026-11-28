@@ -74,3 +74,12 @@ Status snapshot: 27 November 2026. Continue from existing code; do not reset com
 - Website remains optional for business owners.
 - Code or database work is never described as live unless deployment and smoke tests confirm it.
 \n\n## Free-mode improvements — 28 November 2026\n\n- Expanded public-intent search fallback to try Google News RSS then Bing News RSS when GDELT returns no results or an error; source catalog gating remains enabled.\n- Content Studio free templates now support Hindi and English for posts, FAQs and campaign drafts.\n- Both Edge Functions are ACTIVE in production. Authenticated owner flow testing remains pending because no owner test session is available in this environment.\n
+
+## Sample QA and discovery resilience — 28 November 2026
+
+- Sample Grabclever business was reused; no duplicate business or fake leads were created.
+- Transaction-only database QA passed for new-enquiry notification, lead status-change notification, valid follow-up and cross-business follow-up rejection; all test inserts were rolled back.
+- Content draft and campaign draft table save checks passed in rollback transactions.
+- A previously failed discovery scan was requeued and completed via Google News RSS fallback. It returned zero pending candidates; no leads were fabricated.
+- Discovery scan worker deployed as ACTIVE version 13 with GDELT -> broader Google News RSS queries (30-day window) -> Bing News RSS fallback.
+- Owner-session UI end-to-end verification remains pending. Do not label all UI features fully green until an owner session can exercise the dashboard, public enquiry flow, CRM, notification UI, follow-ups and analytics.
