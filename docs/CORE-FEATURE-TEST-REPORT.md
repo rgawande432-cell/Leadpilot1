@@ -60,3 +60,22 @@ Updated: 28 November 2026
 5. Verify DNS/custom domain separately before announcing `urbanbuying.com` as UrbanLeads.
 
 No test enquiries or fake leads were inserted during this audit.
+
+
+## Sample-business test pass — 28 November 2026
+
+Sample: Grabclever Digital Marketing, Pune; website omitted. Existing owner-scoped profile was reused; no new business was created.
+
+- [x] Profile record found; discovery config active and business-specific keywords present.
+- [x] Database transaction test: new-lead notification trigger created exactly one notification (transaction rolled back).
+- [x] Database transaction test: lead status-change notification trigger created exactly one notification (transaction rolled back).
+- [x] Database transaction test: valid same-business follow-up accepted; cross-business follow-up rejected by integrity trigger (transaction rolled back).
+- [x] Transactional save checks for content and campaign draft tables (rolled back).
+- [x] Confirmed all QA transactions rolled back; production counts remain 0 leads, 0 drafts, 0 campaigns, 0 notifications, 0 follow-ups.
+- [x] Requeued the previously failed discovery scan and verified scheduled worker completed it using Google News RSS fallback. Search returned 0 pending candidates, correctly avoiding fabricated leads.
+- [x] Improved process-discovery-scan fallback and deployed version 13 ACTIVE: GDELT -> expanded Google News RSS queries (30-day window) -> Bing News RSS, with broader local terms. Source attribution is preserved.
+- [x] GitHub main synchronized with the worker fix.
+
+## Still not fully E2E verified
+
+Owner-authenticated UI actions (save profile, content-generation invoke, public-link enable, public enquiry submission, CRM screen, notification UI, follow-up planner and analytics) require a logged-in owner test session. Live external RSS results were exercised through the scheduled scan, but the result contained no candidate signals for this sample. A scan with zero candidates is a valid result, not a lead-generation guarantee.
