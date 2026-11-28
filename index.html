@@ -794,7 +794,22 @@ hide('dashboard');
 
 
 // Automatic motion showcase: highlights cards only; never auto-scrolls the page.
-(()=>{const statuses=[...document.querySelectorAll('[data-motion-status]')],cards=[...document.querySelectorAll('.engine-system-card')];if(!cards.length)return;let index=-1;const reduced=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;function setStatus(text){statuses.forEach(s=>s.textContent=text);}function step(){index=(index+1)%cards.length;cards.forEach((c,i)=>c.classList.toggle('motion-active',i===index));// Keep the visitor's scroll position; only highlight the active card.setStatus('Showing: '+cards[index].querySelector('h3')?.textContent+' · '+(index+1)+' of '+cards.length);}if(reduced){setStatus('Motion is limited by your device accessibility setting.');return;}setTimeout(()=>{step();setInterval(step,3400);},900);})();
+(()=>{
+ const statuses=[...document.querySelectorAll('[data-motion-status]')];
+ const cards=[...document.querySelectorAll('.engine-system-card')];
+ if(!cards.length)return;
+ let index=-1;
+ const reduced=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+ function setStatus(text){statuses.forEach(s=>s.textContent=text);}
+ function step(){
+  index=(index+1)%cards.length;
+  cards.forEach((c,i)=>c.classList.toggle('motion-active',i===index));
+  // Keep the visitor's scroll position; only highlight the active card.
+  setStatus('Showing: '+cards[index].querySelector('h3')?.textContent+' · '+(index+1)+' of '+cards.length);
+ }
+ if(reduced){setStatus('Motion is limited by your device accessibility setting.');return;}
+ setTimeout(()=>{step();setInterval(step,3400);},900);
+})();
 </script>
 </body>
 </html>
