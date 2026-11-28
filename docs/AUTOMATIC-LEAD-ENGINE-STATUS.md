@@ -19,8 +19,8 @@ Updated: 29 November 2026
 - Automatic config trigger passed.
 - RSS discovery scan completed; one false positive was identified during audit and rejected.
 - Classifier filters tightened after false-positive audit. v25 adds stronger buyer-intent gating, 21-day freshness check when feed dates exist, conservative score threshold, and AI-enrichment-only rule.
-- Worker v25 is deployed ACTIVE and synced to GitHub. v25 uses strict rules-only qualification: optional LLM can enrich summaries/reasons but cannot promote research/noise to buyer intent. LLM calls now require both OPENAI_API_KEY and OPENAI_MODEL to avoid a hard-coded invalid model.
-- v25 test scan is pending scheduler execution; end-to-end completion is not confirmed.
+- Worker v26 is deployed ACTIVE and synced to GitHub. v25 uses strict rules-only qualification: optional LLM can enrich summaries/reasons but cannot promote research/noise to buyer intent. LLM calls now require both OPENAI_API_KEY and OPENAI_MODEL to avoid a hard-coded invalid model.
+- v26 test scan is pending scheduler execution; end-to-end completion is not confirmed.
 - Current counts: 2 business profiles, 2 active configs, 0 CRM enquiries, 0 pending signals, 2 rejected signals, 2 content drafts.
 
 ## Pending blockers for true acquisition
