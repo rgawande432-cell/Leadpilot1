@@ -2,41 +2,42 @@
 
 Updated: 28 November 2026
 
-## What runs automatically now
+## What runs automatically
 
-- New retailer business profile creation triggers an active discovery configuration automatically (verified with a temporary test profile and cleaned up).
-- Existing two business profiles have active configs.
-- Scan interval default: every 4 hours.
-- Cron: enqueue due scans every 30 minutes; worker every 5 minutes; retries every 10 minutes.
-- Worker v21 claims up to 3 jobs and processes jobs concurrently.
-- Query generation is based on niche, type, services, business keywords and local area.
-- Search providers: GDELT, Google News RSS, Bing News RSS; optional Brave Search API support.
-- Signals are deduplicated, scored and saved only if strict intent filter passes.
-- A daily organic social draft is automatically created and saved to Content Studio, with a 24-hour per-business limit.
+- New business profiles receive active discovery config automatically (trigger tested; temporary test business cleaned up).
+- Existing 2 business profiles are configured active.
+- Default scan interval: every 4 hours.
+- Cron: enqueue due jobs every 30 minutes; worker every 5 minutes; retry every 10 minutes.
+- Worker v21 claims up to 3 jobs and processes them concurrently.
+- Search queries are generated from niche/type, services, profile keywords and local area.
+- Sources: GDELT, Google News RSS and Bing News RSS; optional Brave Search API support.
+- URL deduplication, strict buyer-intent filtering and evidence scoring.
+- One automatic organic content draft per business per 24 hours is saved to Content Studio.
 
-## AI and provider configuration
+## AI / API configuration
 
-- AI classifier/content draft generation: GPT-6 Luna via OpenAI Responses API when `OPENAI_API_KEY` is present.
-- Without OpenAI key: rules-based intent scoring and business-specific templates are used.
-- Brave Search: source catalog is enabled and terms-reviewed; actual API requests require `BRAVE_SEARCH_API_KEY`. Key is currently missing.
-- No credentials are embedded in frontend or repository.
+- GPT-6 Luna is the default cost-efficient model for AI classification and content generation when `OPENAI_API_KEY` is configured.
+- Without OpenAI API key: rules-based filtering and local business templates are used.
+- Brave source is enabled and terms-reviewed in the database; it requires `BRAVE_SEARCH_API_KEY`, which is currently missing.
+- Credentials are server-side only; none are committed to GitHub or frontend code.
 
-## Live test outcomes
+## Verification results
 
-- Trigger test passed: business profile automatically received active discovery config.
-- Worker v20 scan passed: 60 search/article candidates collected, 0 retained signals after strict filtering, 0 CRM leads.
-- One earlier false positive listicle was rejected and strict editorial-title filtering was added.
-- Auto content draft creation passed: a template draft was automatically saved.
-- Worker v21 parallel test was started for two active businesses; see current job/runs in Supabase.
-- Current DB: 2 businesses, 2 active configs, 0 real enquiries, 0 pending signals, 1 rejected signal, 2 automatic content drafts.
+- Automatic config trigger: **PASS** (test profile automatically received active config; test profile deleted).
+- Worker v20 scan: **PASS** — 60 results collected, 0 candidate signals retained, 0 CRM leads.
+- False-positive listicle from earlier v18 run: **rejected**. Strict editorial filter now rejects ranking/listicle/guide/general article headlines.
+- Automatic daily draft creation: **PASS** — template content saved to Content Studio.
+- Worker v21 parallel processing: **PASS** — two business jobs completed concurrently in about 8 seconds; 0 signals and 0 leads; daily draft created/skipped correctly.
+- Current DB counts: 2 businesses, 2 active discovery configs, 0 real enquiries, 0 pending signals, 1 rejected signal, 2 automatic content drafts.
 
-## Not yet automatic / prerequisites
+## What still prevents true hands-free enquiry acquisition
 
-- Public web-search expansion: add Brave key.
-- AI classification/content: add OpenAI API key.
-- Automatic publication/distribution: Facebook/Instagram/Google Business Profile/WhatsApp integrations require credentials, permissions and publish workflow implementation.
-- Actual customer enquiries cannot be guaranteed; public search signals are not verified buyers. Direct enquiries only count after a real person submits/contact through an enabled channel.
+- Public news/search signals cannot be treated as confirmed buyers; real CRM leads require a genuine contact/enquiry or verification.
+- Broader search requires Brave API key.
+- AI classification and AI content require OpenAI API key.
+- Organic posts are generated automatically, but not published automatically yet. Facebook/Instagram/Google Business Profile/WhatsApp publishing and enquiry-channel integrations still need credentials, account permissions, implementation and end-to-end testing.
+- No lead or enquiry guarantees are made.
 
-## Design rule
+## Product rule
 
-Never convert a news article or generic web result into a confirmed CRM lead. Keep candidate signals separate from verified enquiries, and never invent phone/email/contact information.
+Keep potential signals separate from verified enquiries. Do not fabricate contacts, phone numbers, emails, purchases or buyer intent.
