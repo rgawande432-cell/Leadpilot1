@@ -250,10 +250,7 @@ body.motion-override:before,body.motion-override:after{content:"";position:fixed
 <button class="btn" id="heroStart">Start with your business</button>
 <a class="btn alt" href="#engine">Explore the AI engine</a>
 </div>
-<div class="hero-motion-controls">
-<button class="btn alt motion-tour-btn" id="motionTourBtnHero" data-motion-tour type="button">▶ Play motion preview</button>
-<span class="motion-tour-status hero-motion-status" data-motion-status aria-live="polite">Automatic visual tour starts shortly</span>
-</div>
+<div class="hero-motion-controls"><span class="motion-tour-status hero-motion-status" data-motion-status aria-live="polite">Animation starts automatically when the page loads</span></div>
 <div class="hero-trust"><span class="trust-dot"></span> Real workflows · Transparent activity · Built for local business</div>
 </div>
 <div class="urban-engine-visual" aria-label="Illustration of the UrbanLeads AI Opportunity Engine">
@@ -269,7 +266,7 @@ body.motion-override:before,body.motion-override:after{content:"";position:fixed
 </div>
 </section>
 <section class="engine-intro" id="engine">
-<div class="engine-intro-head"><span class="tag">Inside the engine</span><h2>One intelligence layer.<br><span class="hero-gradient">Four growth systems.</span></h2><p>Every module has a clear job—from understanding your business to helping you act on opportunities.</p><button class="btn motion-tour-btn" id="motionTourBtn" data-motion-tour type="button">▶ Play motion preview</button><span class="motion-tour-status" id="motionTourStatus" data-motion-status aria-live="polite">Automatic visual tour starts shortly</span></div>
+<div class="engine-intro-head"><span class="tag">Inside the engine</span><h2>One intelligence layer.<br><span class="hero-gradient">Four growth systems.</span></h2><p>Every module has a clear job—from understanding your business to helping you act on opportunities.</p><span class="motion-tour-status" id="motionTourStatus" data-motion-status aria-live="polite">Automatic visual tour starts shortly</span></div>
 <div class="engine-system-grid">
 <article class="engine-system-card"><div class="system-visual visual-discovery"><div class="visual-radar"><i></i><i></i><i></i><b>⌕</b></div></div><span class="system-number">01 / DISCOVER</span><h3>Intent Discovery</h3><p>Explore relevant customer questions, public signals and opportunity themes. Results depend on available sources.</p></article>
 <article class="engine-system-card"><div class="system-visual visual-content"><div class="creative-stack"><b>✦</b><span>IDEA</span><span>CREATE</span><span>GROW</span></div></div><span class="system-number">02 / CREATE</span><h3>Content Intelligence</h3><p>Turn business context into useful post ideas, captions, creative directions and campaign plans.</p></article>
@@ -742,8 +739,8 @@ hide('dashboard');
 })();
 
 
-// Gentle auto-running motion showcase. User can pause/play; scroll does not interrupt it.
-(()=>{const buttons=[...document.querySelectorAll('[data-motion-tour]')],statuses=[...document.querySelectorAll('[data-motion-status]')],cards=[...document.querySelectorAll('.engine-system-card')];if(!buttons.length||!cards.length)return;let timer=null,index=-1;const reduced=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;function setButtons(text){buttons.forEach(b=>{b.textContent=text;b.setAttribute('aria-pressed',String(!!timer));});}function setStatus(text){statuses.forEach(s=>s.textContent=text);}function step(){index=(index+1)%cards.length;cards.forEach((c,i)=>c.classList.toggle('motion-active',i===index));cards[index].scrollIntoView({behavior:reduced?'auto':'smooth',block:'center'});setStatus('Showing: '+cards[index].querySelector('h3')?.textContent+' · '+(index+1)+' of '+cards.length);}function start(manual){if(reduced&&!manual){setStatus('Motion is reduced by your device. Tap Play to enable the preview.');return;}if(timer)return;if(reduced)document.body.classList.add('motion-override');timer=setInterval(step,3400);setButtons('Ⅱ Pause motion preview');step();}function pause(){if(timer){clearInterval(timer);timer=null;}cards.forEach(c=>c.classList.remove('motion-active'));if(reduced)document.body.classList.remove('motion-override');setButtons('▶ Play motion preview');setStatus('Motion preview paused · Tap Play to resume');}buttons.forEach(b=>b.addEventListener('click',()=>timer?pause():start(true)));if(reduced){setStatus('Motion is reduced by your device. Tap Play to enable the preview.');}else{setButtons('▶ Play motion preview');setTimeout(()=>start(false),1200);}})();
+// Automatic motion showcase: starts on page load, cycles continuously, no play button.
+(()=>{const statuses=[...document.querySelectorAll('[data-motion-status]')],cards=[...document.querySelectorAll('.engine-system-card')];if(!cards.length)return;let index=-1;const reduced=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;function setStatus(text){statuses.forEach(s=>s.textContent=text);}function step(){index=(index+1)%cards.length;cards.forEach((c,i)=>c.classList.toggle('motion-active',i===index));cards[index].scrollIntoView({behavior:'smooth',block:'center'});setStatus('Showing: '+cards[index].querySelector('h3')?.textContent+' · '+(index+1)+' of '+cards.length);}if(reduced){setStatus('Motion is limited by your device accessibility setting.');return;}setTimeout(()=>{step();setInterval(step,3400);},900);})();
 </script>
 </body>
 </html>
